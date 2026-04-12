@@ -19,17 +19,8 @@ import {
 import { useAuth, PLAN_LABELS, PLAN_LIMITS } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 
-const contacts = [
-  { id: 1, name: 'Travis Barker', phone: '+1 234 567 8901', calendarLinked: 'Yes', email: 'travis@example.com' },
-  { id: 2, name: 'Selena Gomez', phone: '+1 987 654 3210', calendarLinked: 'Yes', email: 'selena@example.com' },
-  { id: 3, name: 'Justin Bieber', phone: '+1 555 123 4567', calendarLinked: 'No', email: 'justin@example.com' },
-]
-
-const recentMeetings = [
-  { title: 'Project Kickoff', date: 'April 10, 2026', time: '10:00 AM', attendees: 3 },
-  { title: 'Quarterly Review', date: 'April 12, 2026', time: '2:30 PM', attendees: 5 },
-  { title: 'Design Sync', date: 'April 15, 2026', time: '9:00 AM', attendees: 2 },
-]
+const contacts: { id: number; name: string; phone: string; calendarLinked: string; email: string }[] = []
+const recentMeetings: { title: string; date: string; time: string; attendees: number }[] = []
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -147,29 +138,34 @@ export default function DashboardPage() {
               </h2>
             </div>
             <div className="space-y-4">
-              {[
-                { name: "Travis's Calendar", type: 'Direct Connection' },
-                { name: "Selena's Calendar", type: 'Organization Sync' },
-              ].map((cal) => (
-                <div key={cal.name} className="flex items-center justify-between p-4 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB]">
+              {calendarConnected ? (
+                <div className="flex items-center justify-between p-4 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB]">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-white rounded-lg border border-[#E5E7EB] flex items-center justify-center">
                       <Calendar className="text-[#1A5C52]" size={20} />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-[#1C2B3A]">{cal.name}</p>
-                      <p className="text-xs text-[#6B7280]">{cal.type}</p>
+                      <p className="text-sm font-semibold text-[#1C2B3A]">{userData?.googleCalendar?.email}</p>
+                      <p className="text-xs text-[#6B7280]">Google Calendar</p>
                     </div>
                   </div>
-                  <span className="bg-[#C49A2A]/10 text-[#C49A2A] text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">
+                  <span className="bg-[#1A5C52]/10 text-[#1A5C52] text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">
                     Connected
                   </span>
                 </div>
-              ))}
-              <button className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-[#E5E7EB] rounded-xl text-[#6B7280] text-sm font-medium hover:border-[#1A5C52] hover:text-[#1A5C52] transition-colors group">
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Calendar className="text-[#E5E7EB] mb-2" size={36} />
+                  <p className="text-sm text-[#6B7280]">No calendars connected yet.</p>
+                </div>
+              )}
+              <a
+                href={`/api/google-calendar/connect?state=${userData?.uid}`}
+                className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-[#E5E7EB] rounded-xl text-[#6B7280] text-sm font-medium hover:border-[#1A5C52] hover:text-[#1A5C52] transition-colors group"
+              >
                 <Plus size={16} className="group-hover:scale-110 transition-transform" />
-                Connect Another Calendar
-              </button>
+                Connect Google Calendar
+              </a>
             </div>
           </section>
 
@@ -183,6 +179,12 @@ export default function DashboardPage() {
               <button className="text-xs text-[#1A5C52] font-semibold hover:underline">View All</button>
             </div>
             <div className="space-y-4">
+              {recentMeetings.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Clock className="text-[#E5E7EB] mb-2" size={36} />
+                  <p className="text-sm text-[#6B7280]">No meetings yet.</p>
+                </div>
+              )}
               {recentMeetings.map((meeting, i) => (
                 <div
                   key={i}
