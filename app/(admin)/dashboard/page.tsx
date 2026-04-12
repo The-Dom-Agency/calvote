@@ -15,6 +15,7 @@ import {
   Zap,
   CheckCircle2,
   AlertCircle,
+  Power,
 } from 'lucide-react'
 import { useAuth, PLAN_LABELS, PLAN_LIMITS } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
@@ -149,9 +150,9 @@ export default function DashboardPage() {
                       <p className="text-xs text-[#6B7280]">Google Calendar</p>
                     </div>
                   </div>
-                  <span className="bg-[#1A5C52] text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
-                    Active
-                  </span>
+                  <div className="w-7 h-7 bg-[#1A5C52] rounded-full flex items-center justify-center">
+                    <Power size={13} className="text-white" />
+                  </div>
                 </div>
               ) : (
                 <>
