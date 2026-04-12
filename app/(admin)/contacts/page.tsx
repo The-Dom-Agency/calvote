@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft,
@@ -12,42 +12,105 @@ import {
   Phone,
   Mail,
   X,
+  Link2,
+  CheckCircle2,
+  Loader2,
 } from 'lucide-react'
+import {
+  collection,
+  addDoc,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  serverTimestamp,
+} from 'firebase/firestore'
+import { db } from '@/lib/firebase'
+import { useAuth } from '@/contexts/AuthContext'
+import { toast } from 'sonner'
 
 type Contact = {
-  id: number
+  id: string
   name: string
   email: string
   phone: string
   calendarLinked: boolean
+  calendarEmail?: string
 }
-
-const initialContacts: Contact[] = []
 
 export default function ContactsPage() {
   const router = useRouter()
-  const [contacts, setContacts] = useState<Contact[]>(initialContacts)
+  const { user } = useAuth()
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', phone: '' })
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  // Load contacts from Firestore
+  useEffect(() => {
+    if (!user) return
+    const ref = collection(db, 'users', user.uid, 'contacts')
+    const unsub = onSnapshot(ref, snap => {
+      setContacts(
+        snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Contact, 'id'>) }))
+      )
+      setLoading(false)
+    })
+    return unsub
+  }, [user])
 
   const filtered = contacts.filter(c =>
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.email.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const addContact = (e: React.FormEvent) => {
+  const addContact = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.name || !form.email) return
-    setContacts(prev => [
-      ...prev,
-      { id: Date.now(), ...form, calendarLinked: false },
-    ])
-    setForm({ name: '', email: '', phone: '' })
-    setShowForm(false)
+    if (!user || !form.name || !form.email) return
+    setSaving(true)
+    try {
+      await addDoc(collection(db, 'users', user.uid, 'contacts'), {
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        calendarLinked: false,
+        createdAt: serverTimestamp(),
+      })
+      setForm({ name: '', email: '', phone: '' })
+      setShowForm(false)
+      toast.success('Contact added.')
+    } catch {
+      toast.error('Failed to save contact.')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const remove = (id: number) => setContacts(prev => prev.filter(c => c.id !== id))
+  const remove = async (id: string) => {
+    if (!user) return
+    await deleteDoc(doc(db, 'users', user.uid, 'contacts', id))
+    toast.success('Contact removed.')
+  }
+
+  const copyInviteLink = async (contact: Contact) => {
+    if (!user) return
+    try {
+      const res = await fetch('/api/contacts/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ownerUid: user.uid, contactId: contact.id, contactEmail: contact.email }),
+      })
+      const { link } = await res.json()
+      await navigator.clipboard.writeText(link)
+      setCopiedId(contact.id)
+      toast.success('Invite link copied! Send it to ' + contact.name)
+      setTimeout(() => setCopiedId(null), 3000)
+    } catch {
+      toast.error('Failed to generate invite link.')
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -122,8 +185,10 @@ export default function ContactsPage() {
             <div className="sm:col-span-3 flex justify-end">
               <button
                 type="submit"
-                className="bg-[#1A5C52] text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#1A5C52]/90 transition-colors"
+                disabled={saving}
+                className="bg-[#1A5C52] text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#1A5C52]/90 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
+                {saving && <Loader2 size={14} className="animate-spin" />}
                 Save Contact
               </button>
             </div>
@@ -131,59 +196,83 @@ export default function ContactsPage() {
         </div>
       )}
 
+      {/* Loading */}
+      {loading && (
+        <div className="flex justify-center py-16">
+          <Loader2 className="animate-spin text-[#1A5C52]" size={28} />
+        </div>
+      )}
+
       {/* Contacts Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map(contact => (
-          <div key={contact.id} className="bg-white rounded-2xl border border-[#E5E7EB] p-5 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#1A5C52]/10 text-[#1A5C52] flex items-center justify-center font-bold text-sm">
-                  {contact.name.split(' ').map(n => n[0]).join('')}
+      {!loading && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map(contact => (
+            <div key={contact.id} className="bg-white rounded-2xl border border-[#E5E7EB] p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#1A5C52]/10 text-[#1A5C52] flex items-center justify-center font-bold text-sm">
+                    {contact.name.split(' ').map(n => n[0]).join('')}
+                  </div>
+                  <div>
+                    <p className="font-bold text-[#1C2B3A] text-sm">{contact.name}</p>
+                    {contact.calendarLinked ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-[#1A5C52]/10 text-[#1A5C52] flex items-center gap-1 w-fit">
+                        <CheckCircle2 size={9} /> Calendar Linked
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-[#F3F4F6] text-[#6B7280]">
+                        No Calendar
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="font-bold text-[#1C2B3A] text-sm">{contact.name}</p>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
-                    contact.calendarLinked
-                      ? 'bg-[#C49A2A]/10 text-[#C49A2A]'
-                      : 'bg-[#F3F4F6] text-[#6B7280]'
-                  }`}>
-                    {contact.calendarLinked ? 'Calendar Linked' : 'Not Linked'}
-                  </span>
+                <div className="flex gap-1">
+                  <button className="p-1.5 hover:bg-[#F9FAFB] rounded-lg transition-colors text-[#6B7280] hover:text-[#1A5C52]">
+                    <Edit2 size={14} />
+                  </button>
+                  <button
+                    onClick={() => remove(contact.id)}
+                    className="p-1.5 hover:bg-[#F9FAFB] rounded-lg transition-colors text-[#6B7280] hover:text-[#EF4444]"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
-              <div className="flex gap-1">
-                <button className="p-1.5 hover:bg-[#F9FAFB] rounded-lg transition-colors text-[#6B7280] hover:text-[#1A5C52]">
-                  <Edit2 size={14} />
-                </button>
-                <button
-                  onClick={() => remove(contact.id)}
-                  className="p-1.5 hover:bg-[#F9FAFB] rounded-lg transition-colors text-[#6B7280] hover:text-[#EF4444]"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="flex items-center gap-2 text-xs text-[#6B7280]">
-                <Mail size={12} className="shrink-0" />{contact.email}
-              </p>
-              {contact.phone && (
+
+              <div className="space-y-2">
                 <p className="flex items-center gap-2 text-xs text-[#6B7280]">
-                  <Phone size={12} className="shrink-0" />{contact.phone}
+                  <Mail size={12} className="shrink-0" />{contact.email}
                 </p>
+                {contact.phone && (
+                  <p className="flex items-center gap-2 text-xs text-[#6B7280]">
+                    <Phone size={12} className="shrink-0" />{contact.phone}
+                  </p>
+                )}
+                {contact.calendarLinked && contact.calendarEmail && (
+                  <p className="flex items-center gap-2 text-xs text-[#1A5C52]">
+                    <Calendar size={12} className="shrink-0" />{contact.calendarEmail}
+                  </p>
+                )}
+              </div>
+
+              {!contact.calendarLinked && (
+                <button
+                  onClick={() => copyInviteLink(contact)}
+                  className="mt-4 w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed border-[#E5E7EB] text-xs text-[#6B7280] hover:border-[#1A5C52] hover:text-[#1A5C52] transition-colors"
+                >
+                  {copiedId === contact.id ? (
+                    <><CheckCircle2 size={12} className="text-[#1A5C52]" /> Link copied!</>
+                  ) : (
+                    <><Link2 size={12} /> Copy calendar invite link</>
+                  )}
+                </button>
               )}
             </div>
-            {!contact.calendarLinked && (
-              <button className="mt-4 w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed border-[#E5E7EB] text-xs text-[#6B7280] hover:border-[#1A5C52] hover:text-[#1A5C52] transition-colors">
-                <Calendar size={12} />
-                Link Calendar
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {filtered.length === 0 && (
+      {!loading && filtered.length === 0 && (
         <div className="text-center py-16 flex flex-col items-center gap-2">
           <Mail className="text-[#E5E7EB]" size={40} />
           <p className="text-[#6B7280] text-sm font-medium">
