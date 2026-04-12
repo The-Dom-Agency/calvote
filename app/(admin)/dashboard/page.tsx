@@ -16,20 +16,46 @@ import {
   CheckCircle2,
   AlertCircle,
   Power,
+  Mail,
+  Link2,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
+import { collection, onSnapshot } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 import { useAuth, PLAN_LABELS, PLAN_LIMITS } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 
-const contacts: { id: number; name: string; phone: string; calendarLinked: string; email: string }[] = []
+type Contact = {
+  id: string
+  name: string
+  email: string
+  phone?: string
+  calendarLinked: boolean
+  calendarEmail?: string
+}
+
 const recentMeetings: { title: string; date: string; time: string; attendees: number }[] = []
 
 export default function DashboardPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { userData } = useAuth()
+  const { user, userData } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [showInviteMenu, setShowInviteMenu] = useState(false)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
 
-  // Handle Google Calendar OAuth callback messages — run once on mount only
+  // Load contacts from Firestore
+  useEffect(() => {
+    if (!user) return
+    const ref = collection(db, 'users', user.uid, 'contacts')
+    return onSnapshot(ref, snap => {
+      setContacts(snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Contact, 'id'>) })))
+    })
+  }, [user])
+
+  // Handle Google Calendar OAuth callback — run once on mount only
   useEffect(() => {
     const calendar = searchParams.get('calendar')
     const error = searchParams.get('error')
@@ -48,24 +74,46 @@ export default function DashboardPage() {
   const usagePct = meetingLimit > 0 ? Math.min((meetingsUsed / meetingLimit) * 100, 100) : 0
   const calendarConnected = userData?.googleCalendar?.connected ?? false
 
+  const linkedContacts = contacts.filter(c => c.calendarLinked)
+  const unlinkedContacts = contacts.filter(c => !c.calendarLinked)
+
   const filteredContacts = contacts.filter(c =>
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.email.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  const copyInviteLink = async (contact: Contact) => {
+    if (!user) return
+    try {
+      const res = await fetch('/api/contacts/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ownerUid: user.uid, contactId: contact.id, contactEmail: contact.email }),
+      })
+      const { link } = await res.json()
+      await navigator.clipboard.writeText(link)
+      setCopiedId(contact.id)
+      setShowInviteMenu(false)
+      toast.success(`Invite link copied for ${contact.name}`)
+      setTimeout(() => setCopiedId(null), 3000)
+    } catch {
+      toast.error('Failed to generate invite link.')
+    }
+  }
+
   return (
-    <div className="space-y-10">
+    <div className="space-y-6 sm:space-y-10">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#1C2B3A]">Team Dashboard</h1>
-          <p className="text-[#6B7280] mt-1">Manage your team&apos;s availability and schedule meetings effortlessly.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#1C2B3A]">Team Dashboard</h1>
+          <p className="text-[#6B7280] mt-1 text-sm">Manage your team&apos;s availability and schedule meetings effortlessly.</p>
         </div>
         <Link
           href="/schedule"
-          className="inline-flex items-center justify-center gap-2 bg-[#1A5C52] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#1A5C52]/90 transition-all shadow-md shadow-[#1A5C52]/10"
+          className="inline-flex items-center justify-center gap-2 bg-[#1A5C52] text-white px-5 py-3 rounded-lg font-semibold hover:bg-[#1A5C52]/90 transition-all shadow-md shadow-[#1A5C52]/10 text-sm sm:text-base"
         >
-          <Plus size={20} />
+          <Plus size={18} />
           Schedule a Meeting
         </Link>
       </div>
@@ -73,9 +121,9 @@ export default function DashboardPage() {
       {/* Plan + Calendar Status Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Plan status */}
-        <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5 shadow-sm flex items-center justify-between">
+        <div className="bg-white rounded-2xl border border-[#E5E7EB] p-4 sm:p-5 shadow-sm flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#1A5C52]/10 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-[#1A5C52]/10 rounded-xl flex items-center justify-center shrink-0">
               <Zap size={18} className="text-[#1A5C52]" />
             </div>
             <div>
@@ -86,8 +134,8 @@ export default function DashboardPage() {
             </div>
           </div>
           {meetingLimit > 0 && (
-            <div className="text-right min-w-[100px]">
-              <p className="text-xs text-[#6B7280] mb-1">{meetingsUsed} / {meetingLimit} meetings</p>
+            <div className="text-right min-w-[90px]">
+              <p className="text-xs text-[#6B7280] mb-1">{meetingsUsed} / {meetingLimit}</p>
               <div className="h-1.5 bg-[#F3F4F6] rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all ${usagePct > 90 ? 'bg-[#EF4444]' : 'bg-[#1A5C52]'}`}
@@ -99,16 +147,17 @@ export default function DashboardPage() {
         </div>
 
         {/* Google Calendar status */}
-        <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5 shadow-sm flex items-center justify-between">
+        <div className="bg-white rounded-2xl border border-[#E5E7EB] p-4 sm:p-5 shadow-sm flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#F9FAFB] rounded-xl flex items-center justify-center border border-[#E5E7EB]">
+            <div className="w-10 h-10 bg-[#F9FAFB] rounded-xl flex items-center justify-center border border-[#E5E7EB] shrink-0">
               <Calendar size={18} className={calendarConnected ? 'text-[#1A5C52]' : 'text-[#9CA3AF]'} />
             </div>
             <div>
               <p className="text-xs text-[#6B7280] font-medium">Google Calendar</p>
               {calendarConnected ? (
                 <p className="text-sm font-bold text-[#1A5C52] flex items-center gap-1">
-                  <CheckCircle2 size={13} /> Connected — {userData?.googleCalendar?.email}
+                  <CheckCircle2 size={13} />
+                  <span className="truncate max-w-[140px]">{userData?.googleCalendar?.email}</span>
                 </p>
               ) : (
                 <p className="text-sm font-bold text-[#6B7280] flex items-center gap-1">
@@ -129,124 +178,157 @@ export default function DashboardPage() {
       </div>
 
       {/* Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
 
         {/* Left Column */}
-        <div className="lg:col-span-1 space-y-8">
+        <div className="lg:col-span-1 space-y-6 sm:space-y-8">
 
           {/* Connected Calendars */}
-          <section className="bg-white rounded-2xl border border-[#E5E7EB] p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-[#1C2B3A] flex items-center gap-2">
+          <section className="bg-white rounded-2xl border border-[#E5E7EB] p-5 sm:p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-base sm:text-lg font-bold text-[#1C2B3A] flex items-center gap-2">
                 <Calendar className="text-[#1A5C52]" size={20} />
                 Connected Calendars
               </h2>
             </div>
+
             <div className="space-y-3">
+              {/* Your own calendar */}
               {calendarConnected ? (
-                <div className="flex items-center justify-between p-4 bg-[#F0FDF9] rounded-xl border border-[#1A5C52]/20">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-white rounded-lg border border-[#1A5C52]/20 flex items-center justify-center">
-                      <Calendar className="text-[#1A5C52]" size={17} />
+                <div className="flex items-center justify-between p-3.5 bg-[#F0FDF9] rounded-xl border border-[#1A5C52]/20">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 bg-white rounded-lg border border-[#1A5C52]/20 flex items-center justify-center shrink-0">
+                      <Calendar className="text-[#1A5C52]" size={15} />
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[#1C2B3A] leading-tight">{userData?.googleCalendar?.email}</p>
-                      <p className="text-xs text-[#6B7280]">Google Calendar</p>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-[#1C2B3A] truncate">{userData?.googleCalendar?.email}</p>
+                      <p className="text-[10px] text-[#6B7280]">You · Google Calendar</p>
                     </div>
                   </div>
-                  <div className="w-7 h-7 bg-[#1A5C52] rounded-full flex items-center justify-center">
-                    <Power size={13} className="text-white" />
+                  <div className="w-6 h-6 bg-[#1A5C52] rounded-full flex items-center justify-center shrink-0 ml-2">
+                    <Power size={11} className="text-white" />
                   </div>
                 </div>
               ) : (
-                <>
-                  <div className="flex flex-col items-center justify-center py-6 text-center">
-                    <Calendar className="text-[#E5E7EB] mb-2" size={32} />
-                    <p className="text-sm text-[#6B7280]">No calendar connected yet.</p>
+                <a
+                  href={`/api/google-calendar/connect?state=${userData?.uid}`}
+                  className="flex items-center justify-center gap-2 py-3 border-2 border-dashed border-[#E5E7EB] rounded-xl text-[#6B7280] text-xs font-medium hover:border-[#1A5C52] hover:text-[#1A5C52] transition-colors"
+                >
+                  <Plus size={14} />
+                  Connect your Google Calendar
+                </a>
+              )}
+
+              {/* Linked contacts' calendars */}
+              {linkedContacts.map(contact => (
+                <div key={contact.id} className="flex items-center justify-between p-3.5 bg-[#F0FDF9] rounded-xl border border-[#1A5C52]/20">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 bg-[#1A5C52]/10 rounded-full flex items-center justify-center shrink-0 text-[#1A5C52] font-bold text-xs">
+                      {contact.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-[#1C2B3A] truncate">{contact.name}</p>
+                      <p className="text-[10px] text-[#6B7280] truncate">{contact.calendarEmail || 'Google Calendar'}</p>
+                    </div>
                   </div>
-                  <a
-                    href={`/api/google-calendar/connect?state=${userData?.uid}`}
-                    className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-[#E5E7EB] rounded-xl text-[#6B7280] text-sm font-medium hover:border-[#1A5C52] hover:text-[#1A5C52] transition-colors group"
+                  <div className="w-6 h-6 bg-[#1A5C52] rounded-full flex items-center justify-center shrink-0 ml-2">
+                    <Power size={11} className="text-white" />
+                  </div>
+                </div>
+              ))}
+
+              {/* Invite to connect calendar */}
+              {unlinkedContacts.length > 0 && (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowInviteMenu(v => !v)}
+                    className="w-full flex items-center justify-between gap-2 py-2.5 px-4 border border-dashed border-[#E5E7EB] rounded-xl text-[#6B7280] text-xs font-medium hover:border-[#1A5C52] hover:text-[#1A5C52] transition-colors"
                   >
-                    <Plus size={16} className="group-hover:scale-110 transition-transform" />
-                    Connect Google Calendar
-                  </a>
-                </>
+                    <span className="flex items-center gap-2">
+                      <Mail size={13} />
+                      Invite to connect calendar
+                    </span>
+                    {showInviteMenu ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                  </button>
+
+                  {showInviteMenu && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#E5E7EB] rounded-xl shadow-lg z-10 overflow-hidden">
+                      {unlinkedContacts.map(contact => (
+                        <button
+                          key={contact.id}
+                          onClick={() => copyInviteLink(contact)}
+                          className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#F9FAFB] transition-colors text-left"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-7 h-7 rounded-full bg-[#F3F4F6] flex items-center justify-center text-[#6B7280] font-bold text-[10px] shrink-0">
+                              {contact.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-[#1C2B3A] truncate">{contact.name}</p>
+                              <p className="text-[10px] text-[#9CA3AF] truncate">{contact.email}</p>
+                            </div>
+                          </div>
+                          {copiedId === contact.id ? (
+                            <CheckCircle2 size={13} className="text-[#1A5C52] shrink-0 ml-2" />
+                          ) : (
+                            <Link2 size={13} className="text-[#9CA3AF] shrink-0 ml-2" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {contacts.length === 0 && !calendarConnected && (
+                <p className="text-xs text-[#9CA3AF] text-center py-2">
+                  Add contacts to invite them.
+                </p>
               )}
             </div>
           </section>
 
           {/* Recent Meetings */}
-          <section className="bg-white rounded-2xl border border-[#E5E7EB] p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-[#1C2B3A] flex items-center gap-2">
+          <section className="bg-white rounded-2xl border border-[#E5E7EB] p-5 sm:p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-base sm:text-lg font-bold text-[#1C2B3A] flex items-center gap-2">
                 <Clock className="text-[#1A5C52]" size={20} />
                 Recent Meetings
               </h2>
-              <button className="text-xs text-[#1A5C52] font-semibold hover:underline">View All</button>
             </div>
-            <div className="space-y-4">
-              {recentMeetings.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <Clock className="text-[#E5E7EB] mb-2" size={36} />
-                  <p className="text-sm text-[#6B7280]">No meetings yet.</p>
-                </div>
-              )}
-              {recentMeetings.map((meeting, i) => (
-                <div
-                  key={i}
-                  className="p-4 bg-white border-l-4 border-[#1A5C52] border-y border-r border-[#E5E7EB] rounded-r-xl hover:shadow-md transition-shadow cursor-pointer"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-sm font-bold text-[#1C2B3A]">{meeting.title}</h3>
-                    <ExternalLink size={14} className="text-[#6B7280]" />
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-[#6B7280]">
-                    <span className="flex items-center gap-1"><Calendar size={12} />{meeting.date}</span>
-                    <span className="flex items-center gap-1"><Clock size={12} />{meeting.time}</span>
-                  </div>
-                  <div className="mt-3 flex -space-x-2">
-                    {[...Array(Math.min(meeting.attendees, 3))].map((_, idx) => (
-                      <div key={idx} className="w-6 h-6 rounded-full border-2 border-white bg-[#F3F4F6] flex items-center justify-center text-[8px] font-bold text-[#1A5C52]">
-                        {['TB', 'SG', 'JB'][idx]}
-                      </div>
-                    ))}
-                    {meeting.attendees > 3 && (
-                      <div className="w-6 h-6 rounded-full border-2 border-white bg-[#F3F4F6] flex items-center justify-center text-[8px] font-bold text-[#6B7280]">
-                        +{meeting.attendees - 3}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+            {recentMeetings.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Clock className="text-[#E5E7EB] mb-2" size={36} />
+                <p className="text-sm text-[#6B7280]">No meetings yet.</p>
+              </div>
+            )}
           </section>
         </div>
 
         {/* Right Column – Contact Directory */}
         <div className="lg:col-span-2">
-          <section className="bg-white rounded-2xl border border-[#E5E7EB] shadow-sm flex flex-col h-full">
-            <div className="p-6 border-b border-[#E5E7EB] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <h2 className="text-lg font-bold text-[#1C2B3A] flex items-center gap-2">
+          <section className="bg-white rounded-2xl border border-[#E5E7EB] shadow-sm flex flex-col">
+            <div className="p-4 sm:p-6 border-b border-[#E5E7EB] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <h2 className="text-base sm:text-lg font-bold text-[#1C2B3A] flex items-center gap-2">
                 <Users className="text-[#1A5C52]" size={20} />
                 Contact Directory
               </h2>
               <div className="flex items-center gap-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280]" size={18} />
+                <div className="relative flex-1 sm:flex-none">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280]" size={16} />
                   <input
                     type="text"
                     placeholder="Search contacts..."
-                    className="pl-10 pr-4 py-2 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1A5C52]/20 focus:border-[#1A5C52] transition-all w-full sm:w-64"
+                    className="pl-9 pr-4 py-2 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1A5C52]/20 focus:border-[#1A5C52] transition-all w-full sm:w-56"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
                 <button
                   onClick={() => router.push('/contacts')}
-                  className="bg-[#1A5C52] text-white p-2 rounded-lg hover:bg-[#1A5C52]/90 transition-colors"
+                  className="bg-[#1A5C52] text-white p-2 rounded-lg hover:bg-[#1A5C52]/90 transition-colors shrink-0"
                 >
-                  <Plus size={20} />
+                  <Plus size={18} />
                 </button>
               </div>
             </div>
@@ -255,41 +337,41 @@ export default function DashboardPage() {
               <table className="w-full text-left">
                 <thead className="bg-[#F9FAFB]">
                   <tr>
-                    <th className="px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider hidden sm:table-cell">Email</th>
-                    <th className="px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider hidden md:table-cell">Calendar Linked</th>
-                    <th className="px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider text-right">Actions</th>
+                    <th className="px-4 sm:px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider">Name</th>
+                    <th className="px-4 sm:px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider hidden sm:table-cell">Email</th>
+                    <th className="px-4 sm:px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider hidden md:table-cell">Calendar</th>
+                    <th className="px-4 sm:px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E5E7EB]">
                   {filteredContacts.length > 0 ? (
                     filteredContacts.map((contact) => (
                       <tr key={contact.id} className="hover:bg-[#F9FAFB] transition-colors">
-                        <td className="px-6 py-4">
+                        <td className="px-4 sm:px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-[#1A5C52]/10 text-[#1A5C52] flex items-center justify-center font-bold text-xs">
+                            <div className="w-8 h-8 rounded-full bg-[#1A5C52]/10 text-[#1A5C52] flex items-center justify-center font-bold text-xs shrink-0">
                               {contact.name.split(' ').map(n => n[0]).join('')}
                             </div>
-                            <span className="text-sm font-semibold text-[#1C2B3A]">{contact.name}</span>
+                            <span className="text-sm font-semibold text-[#1C2B3A] truncate">{contact.name}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-[#6B7280] hidden sm:table-cell">{contact.email}</td>
-                        <td className="px-6 py-4 hidden md:table-cell">
-                          {contact.calendarLinked === 'Yes' ? (
-                            <span className="inline-flex items-center gap-1 text-[#C49A2A] text-xs font-bold">
-                              <Calendar size={12} /> Linked
+                        <td className="px-4 sm:px-6 py-4 text-sm text-[#6B7280] hidden sm:table-cell truncate max-w-[160px]">{contact.email}</td>
+                        <td className="px-4 sm:px-6 py-4 hidden md:table-cell">
+                          {contact.calendarLinked ? (
+                            <span className="inline-flex items-center gap-1 text-[#1A5C52] text-xs font-bold">
+                              <CheckCircle2 size={12} /> Linked
                             </span>
                           ) : (
-                            <span className="text-[#6B7280] text-xs">Not Linked</span>
+                            <span className="text-[#9CA3AF] text-xs">Not linked</span>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-4 sm:px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2 text-[#6B7280]">
-                            <button className="p-1 hover:text-[#1A5C52] hover:bg-white rounded transition-colors">
-                              <Edit2 size={16} />
+                            <button className="p-1 hover:text-[#1A5C52] hover:bg-[#F9FAFB] rounded transition-colors">
+                              <Edit2 size={15} />
                             </button>
-                            <button className="p-1 hover:text-[#EF4444] hover:bg-white rounded transition-colors">
-                              <Trash2 size={16} />
+                            <button className="p-1 hover:text-[#EF4444] hover:bg-[#F9FAFB] rounded transition-colors">
+                              <Trash2 size={15} />
                             </button>
                           </div>
                         </td>
@@ -299,8 +381,14 @@ export default function DashboardPage() {
                     <tr>
                       <td colSpan={4} className="px-6 py-12 text-center">
                         <div className="flex flex-col items-center">
-                          <Users className="text-[#E5E7EB] mb-2" size={48} />
-                          <p className="text-[#6B7280] text-sm font-medium">No contacts found</p>
+                          <Users className="text-[#E5E7EB] mb-2" size={40} />
+                          <p className="text-[#6B7280] text-sm font-medium">No contacts yet</p>
+                          <button
+                            onClick={() => router.push('/contacts')}
+                            className="mt-3 text-xs text-[#1A5C52] font-semibold hover:underline"
+                          >
+                            + Add your first contact
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -309,7 +397,7 @@ export default function DashboardPage() {
               </table>
             </div>
 
-            <div className="p-4 border-t border-[#E5E7EB] bg-[#F9FAFB] text-center mt-auto">
+            <div className="p-4 border-t border-[#E5E7EB] bg-[#F9FAFB] text-center">
               <Link href="/contacts" className="text-sm font-bold text-[#1A5C52] hover:underline">
                 View &amp; Manage Full Directory
               </Link>
