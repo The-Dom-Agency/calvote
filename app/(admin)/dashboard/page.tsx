@@ -34,10 +34,10 @@ export default function DashboardPage() {
     const calendar = searchParams.get('calendar')
     const error = searchParams.get('error')
     if (calendar === 'connected') {
-      toast.success('Google Calendar connected successfully!')
+      toast.success('Google Calendar connected successfully!', { id: 'cal-connected' })
       router.replace('/dashboard')
     } else if (error === 'calendar_auth_failed' || error === 'calendar_token_failed') {
-      toast.error('Calendar connection failed. Please try again.')
+      toast.error('Calendar connection failed. Please try again.', { id: 'cal-error' })
       router.replace('/dashboard')
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
