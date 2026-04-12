@@ -27,7 +27,7 @@ export default function LandingPage() {
         </h1>
 
         <p className="text-lg text-[#6B7280] max-w-xl mb-12 leading-relaxed">
-          calvote connects your team&apos;s calendars and lets clients book the right meeting, with the right person, at the right time — automatically.
+          calvote connects your team&apos;s calendars and lets clients book the right meeting, with the right person, at the right time, automatically.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
