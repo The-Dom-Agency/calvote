@@ -5,6 +5,7 @@ import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import { Logo } from '@/components/Logo'
 import { toast } from 'sonner'
+import Link from 'next/link'
 
 const googleProvider = new GoogleAuthProvider()
 googleProvider.setCustomParameters({ prompt: 'select_account' })
@@ -26,11 +27,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-6">
+    <div className="min-h-screen bg-white flex flex-col">
+      <div className="px-8 py-4">
+        <Link href="/" className="text-sm text-[#6B7280] hover:text-[#1C2B3A] transition-colors flex items-center gap-1">
+          ← Back to home
+        </Link>
+      </div>
+      <div className="flex-1 flex items-center justify-center px-6">
       <div className="w-full max-w-md">
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-10 shadow-sm text-center">
           <div className="flex justify-center mb-6">
-            <Logo />
+            <Link href="/"><Logo /></Link>
           </div>
 
           <h1 className="text-2xl font-bold text-[#1C2B3A] mb-2">Welcome back</h1>
@@ -52,6 +59,7 @@ export default function LoginPage() {
             {loading ? 'Signing in...' : 'Continue with Google'}
           </button>
         </div>
+      </div>
       </div>
     </div>
   )

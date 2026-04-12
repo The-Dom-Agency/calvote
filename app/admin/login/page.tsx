@@ -5,6 +5,7 @@ import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import { toast } from 'sonner'
 import { ShieldCheck } from 'lucide-react'
+import Link from 'next/link'
 
 const googleProvider = new GoogleAuthProvider()
 googleProvider.setCustomParameters({ prompt: 'select_account' })
@@ -26,7 +27,13 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1C2B3A] flex items-center justify-center px-6">
+    <div className="min-h-screen bg-[#1C2B3A] flex flex-col">
+      <div className="px-8 py-4">
+        <Link href="/" className="text-sm text-white/30 hover:text-white/70 transition-colors flex items-center gap-1">
+          ← Back to home
+        </Link>
+      </div>
+      <div className="flex-1 flex items-center justify-center px-6">
       <div className="w-full max-w-sm">
         <div className="bg-[#1C2B3A] border border-white/10 rounded-2xl p-10 text-center shadow-xl">
           <div className="flex justify-center mb-6">
@@ -54,6 +61,7 @@ export default function AdminLoginPage() {
             {loading ? 'Signing in...' : 'Continue with Google'}
           </button>
         </div>
+      </div>
       </div>
     </div>
   )
