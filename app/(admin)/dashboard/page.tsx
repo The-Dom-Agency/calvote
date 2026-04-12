@@ -137,35 +137,37 @@ export default function DashboardPage() {
                 Connected Calendars
               </h2>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {calendarConnected ? (
-                <div className="flex items-center justify-between p-4 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB]">
+                <div className="flex items-center justify-between p-4 bg-[#F0FDF9] rounded-xl border border-[#1A5C52]/20">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white rounded-lg border border-[#E5E7EB] flex items-center justify-center">
-                      <Calendar className="text-[#1A5C52]" size={20} />
+                    <div className="w-9 h-9 bg-white rounded-lg border border-[#1A5C52]/20 flex items-center justify-center">
+                      <Calendar className="text-[#1A5C52]" size={17} />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-[#1C2B3A]">{userData?.googleCalendar?.email}</p>
+                      <p className="text-sm font-semibold text-[#1C2B3A] leading-tight">{userData?.googleCalendar?.email}</p>
                       <p className="text-xs text-[#6B7280]">Google Calendar</p>
                     </div>
                   </div>
-                  <span className="bg-[#1A5C52]/10 text-[#1A5C52] text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">
-                    Connected
+                  <span className="bg-[#1A5C52] text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
+                    Active
                   </span>
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <Calendar className="text-[#E5E7EB] mb-2" size={36} />
-                  <p className="text-sm text-[#6B7280]">No calendars connected yet.</p>
-                </div>
+                <>
+                  <div className="flex flex-col items-center justify-center py-6 text-center">
+                    <Calendar className="text-[#E5E7EB] mb-2" size={32} />
+                    <p className="text-sm text-[#6B7280]">No calendar connected yet.</p>
+                  </div>
+                  <a
+                    href={`/api/google-calendar/connect?state=${userData?.uid}`}
+                    className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-[#E5E7EB] rounded-xl text-[#6B7280] text-sm font-medium hover:border-[#1A5C52] hover:text-[#1A5C52] transition-colors group"
+                  >
+                    <Plus size={16} className="group-hover:scale-110 transition-transform" />
+                    Connect Google Calendar
+                  </a>
+                </>
               )}
-              <a
-                href={`/api/google-calendar/connect?state=${userData?.uid}`}
-                className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-[#E5E7EB] rounded-xl text-[#6B7280] text-sm font-medium hover:border-[#1A5C52] hover:text-[#1A5C52] transition-colors group"
-              >
-                <Plus size={16} className="group-hover:scale-110 transition-transform" />
-                Connect Google Calendar
-              </a>
             </div>
           </section>
 
