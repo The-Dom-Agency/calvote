@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { User, Bell, LogOut, LayoutDashboard, Users, CalendarPlus, Smartphone } from 'lucide-react'
+import { Bell, LogOut, LayoutDashboard, Users, CalendarPlus, Smartphone, ShieldCheck } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -13,11 +14,19 @@ const navItems = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const { userData, logout } = useAuth()
+
+  const initials = (userData?.displayName || userData?.email || '?')
+    .split(' ')
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
 
   return (
     <div className="min-h-screen bg-white">
       <nav className="bg-[#1A5C52] text-white px-6 py-3 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center gap-12">
+        <div className="flex items-center gap-10">
           <Link href="/dashboard" className="hover:opacity-90 transition-opacity">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
@@ -27,7 +36,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </Link>
 
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-1">
             {navItems.map((item) => {
               const Icon = item.icon
               const isActive = pathname === item.path
@@ -35,34 +44,44 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <Link
                   key={item.path}
                   href={item.path}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
-                    isActive ? 'bg-white/10' : 'hover:bg-white/5'
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium ${
+                    isActive ? 'bg-white/15' : 'hover:bg-white/8'
                   }`}
                 >
-                  <Icon size={18} />
-                  <span className="font-medium text-sm">{item.name}</span>
+                  <Icon size={16} />
+                  {item.name}
                 </Link>
               )
             })}
+            {userData?.isAdmin && (
+              <Link
+                href="/admin"
+                className="flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium hover:bg-white/8 text-[#C49A2A]"
+              >
+                <ShieldCheck size={16} />
+                Admin
+              </Link>
+            )}
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <button className="p-2 hover:bg-white/10 rounded-full transition-colors relative">
-            <Bell size={20} />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#C49A2A] rounded-full border border-[#1A5C52]" />
+            <Bell size={18} />
+            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[#C49A2A] rounded-full" />
           </button>
-          <div className="flex items-center gap-3 pl-4 border-l border-white/20">
+
+          <div className="flex items-center gap-2.5 pl-3 border-l border-white/20">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-semibold">Admin</p>
-              <p className="text-xs text-white/70">calvote.ai</p>
+              <p className="text-sm font-semibold leading-tight">{userData?.displayName || 'User'}</p>
+              <p className="text-[10px] text-white/60 capitalize">{userData?.plan} plan</p>
             </div>
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center border border-white/30">
-              <User size={20} />
+            <div className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center border border-white/30 text-xs font-bold">
+              {initials}
             </div>
-            <Link href="/" className="p-2 hover:bg-white/10 rounded-full transition-colors">
-              <LogOut size={20} />
-            </Link>
+            <button onClick={logout} className="p-1.5 hover:bg-white/10 rounded-full transition-colors" title="Sign out">
+              <LogOut size={17} />
+            </button>
           </div>
         </div>
       </nav>

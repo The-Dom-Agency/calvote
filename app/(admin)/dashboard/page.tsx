@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Calendar,
   Plus,
@@ -12,7 +12,12 @@ import {
   ExternalLink,
   Users,
   Clock,
+  Zap,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react'
+import { useAuth, PLAN_LABELS, PLAN_LIMITS } from '@/contexts/AuthContext'
+import { toast } from 'sonner'
 
 const contacts = [
   { id: 1, name: 'Travis Barker', phone: '+1 234 567 8901', calendarLinked: 'Yes', email: 'travis@example.com' },
@@ -28,7 +33,24 @@ const recentMeetings = [
 
 export default function DashboardPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const { userData } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
+
+  // Handle Google Calendar OAuth callback messages
+  useEffect(() => {
+    if (searchParams.get('calendar') === 'connected') {
+      toast.success('Google Calendar connected successfully!')
+    }
+    if (searchParams.get('error') === 'calendar_auth_failed') {
+      toast.error('Calendar connection failed. Please try again.')
+    }
+  }, [searchParams])
+
+  const meetingsUsed = userData?.meetingsUsed ?? 0
+  const meetingLimit = PLAN_LIMITS[userData?.plan ?? 'free']
+  const usagePct = meetingLimit > 0 ? Math.min((meetingsUsed / meetingLimit) * 100, 100) : 0
+  const calendarConnected = userData?.googleCalendar?.connected ?? false
 
   const filteredContacts = contacts.filter(c =>
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -50,6 +72,64 @@ export default function DashboardPage() {
           <Plus size={20} />
           Schedule a Meeting
         </Link>
+      </div>
+
+      {/* Plan + Calendar Status Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Plan status */}
+        <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5 shadow-sm flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#1A5C52]/10 rounded-xl flex items-center justify-center">
+              <Zap size={18} className="text-[#1A5C52]" />
+            </div>
+            <div>
+              <p className="text-xs text-[#6B7280] font-medium">Current Plan</p>
+              <p className="text-sm font-bold text-[#1C2B3A]">
+                {PLAN_LABELS[userData?.plan ?? 'free']}
+              </p>
+            </div>
+          </div>
+          {meetingLimit > 0 && (
+            <div className="text-right min-w-[100px]">
+              <p className="text-xs text-[#6B7280] mb-1">{meetingsUsed} / {meetingLimit} meetings</p>
+              <div className="h-1.5 bg-[#F3F4F6] rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${usagePct > 90 ? 'bg-[#EF4444]' : 'bg-[#1A5C52]'}`}
+                  style={{ width: `${usagePct}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Google Calendar status */}
+        <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5 shadow-sm flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#F9FAFB] rounded-xl flex items-center justify-center border border-[#E5E7EB]">
+              <Calendar size={18} className={calendarConnected ? 'text-[#1A5C52]' : 'text-[#9CA3AF]'} />
+            </div>
+            <div>
+              <p className="text-xs text-[#6B7280] font-medium">Google Calendar</p>
+              {calendarConnected ? (
+                <p className="text-sm font-bold text-[#1A5C52] flex items-center gap-1">
+                  <CheckCircle2 size={13} /> Connected — {userData?.googleCalendar?.email}
+                </p>
+              ) : (
+                <p className="text-sm font-bold text-[#6B7280] flex items-center gap-1">
+                  <AlertCircle size={13} /> Not connected
+                </p>
+              )}
+            </div>
+          </div>
+          {!calendarConnected && (
+            <a
+              href={`/api/google-calendar/connect?state=${userData?.uid}`}
+              className="text-xs font-bold text-[#1A5C52] border border-[#1A5C52] px-3 py-1.5 rounded-lg hover:bg-[#1A5C52]/5 transition-colors whitespace-nowrap"
+            >
+              Connect →
+            </a>
+          )}
+        </div>
       </div>
 
       {/* Grid Layout */}
