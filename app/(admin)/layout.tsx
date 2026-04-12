@@ -14,7 +14,7 @@ const navItems = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { userData, logout } = useAuth()
+  const { userData, adminData, isAdmin, logout } = useAuth()
 
   const initials = (userData?.displayName || userData?.email || '?')
     .split(' ')
@@ -53,7 +53,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </Link>
               )
             })}
-            {userData?.isAdmin && (
+            {isAdmin && (
               <Link
                 href="/admin"
                 className="flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium hover:bg-white/8 text-[#C49A2A]"

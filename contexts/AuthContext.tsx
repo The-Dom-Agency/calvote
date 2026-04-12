@@ -55,7 +55,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType>({} as AuthContextType)
 
 const ALWAYS_ALLOWED = (path: string) =>
-  path === '/' || path.startsWith('/availability') || path.startsWith('/admin/join')
+  path === '/' || path === '/login' || path.startsWith('/availability') || path.startsWith('/admin/join')
 
 async function seedAdminIfNeeded(user: User): Promise<AdminData | null> {
   const email = user.email ?? ''
@@ -119,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
     setUserData(null)
     setAdminData(null)
-    router.replace('/')
+    router.replace('/login')
   }
 
   useEffect(() => {
@@ -154,7 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUserData(null)
         setAdminData(null)
         if (!ALWAYS_ALLOWED(pathname)) {
-          router.replace('/')
+          router.replace('/login')
         }
       }
 
