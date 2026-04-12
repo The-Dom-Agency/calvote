@@ -92,7 +92,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await fetchOrCreateUser(firebaseUser)
         setUserData(data)
 
-        if (!ALWAYS_ALLOWED(pathname)) {
+        // After login on public pages, redirect to the app
+        if (pathname === '/login' || pathname === '/') {
+          router.replace(data.plan === 'free' ? '/activate' : '/dashboard')
+        } else if (!ALWAYS_ALLOWED(pathname)) {
           if (data.plan === 'free' && pathname !== '/activate') {
             router.replace('/activate')
           } else if (data.plan !== 'free' && pathname === '/activate') {
