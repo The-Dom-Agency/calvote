@@ -22,13 +22,7 @@ type Contact = {
   calendarLinked: boolean
 }
 
-const initialContacts: Contact[] = [
-  { id: 1, name: 'Travis Barker', email: 'travis@example.com', phone: '+1 234 567 8901', calendarLinked: true },
-  { id: 2, name: 'Selena Gomez', email: 'selena@example.com', phone: '+1 987 654 3210', calendarLinked: true },
-  { id: 3, name: 'Justin Bieber', email: 'justin@example.com', phone: '+1 555 123 4567', calendarLinked: false },
-  { id: 4, name: 'Ariana Grande', email: 'ariana@example.com', phone: '+1 444 555 6666', calendarLinked: true },
-  { id: 5, name: 'Dua Lipa', email: 'dua@example.com', phone: '+1 777 888 9999', calendarLinked: false },
-]
+const initialContacts: Contact[] = []
 
 export default function ContactsPage() {
   const router = useRouter()
@@ -190,8 +184,11 @@ export default function ContactsPage() {
       </div>
 
       {filtered.length === 0 && (
-        <div className="text-center py-16">
-          <p className="text-[#6B7280] text-sm">No contacts found.</p>
+        <div className="text-center py-16 flex flex-col items-center gap-2">
+          <Mail className="text-[#E5E7EB]" size={40} />
+          <p className="text-[#6B7280] text-sm font-medium">
+            {searchTerm ? 'No contacts match your search.' : 'No contacts yet. Add your first contact above.'}
+          </p>
         </div>
       )}
     </div>
