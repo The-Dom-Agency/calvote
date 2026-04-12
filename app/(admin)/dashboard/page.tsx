@@ -33,7 +33,7 @@ export default function DashboardPage() {
     if (searchParams.get('calendar') === 'connected') {
       toast.success('Google Calendar connected successfully!')
     }
-    if (searchParams.get('error') === 'calendar_auth_failed') {
+    if (searchParams.get('error') === 'calendar_auth_failed' || searchParams.get('error') === 'calendar_token_failed') {
       toast.error('Calendar connection failed. Please try again.')
     }
   }, [searchParams])
