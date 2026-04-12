@@ -1,19 +1,11 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import {
-  onAuthStateChanged,
-  signOut,
-  type User,
-} from 'firebase/auth'
-import {
-  doc,
-  getDoc,
-  setDoc,
-  serverTimestamp,
-} from 'firebase/firestore'
+import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
 import { useRouter, usePathname } from 'next/navigation'
+import { SEEDED_ADMINS, type AdminRole } from '@/lib/admin-config'
 
 export type Plan = 'free' | 'starter' | 'growth' | 'scale'
 
@@ -37,19 +29,24 @@ export type UserData = {
   displayName: string
   plan: Plan
   meetingsUsed: number
-  isAdmin: boolean
   promoUsed?: string
-  googleCalendar?: {
-    connected: boolean
-    email?: string
-    accessToken?: string
-    refreshToken?: string
-  }
+  googleCalendar?: { connected: boolean; email?: string }
+}
+
+export type AdminData = {
+  uid: string
+  email: string
+  displayName: string
+  role: AdminRole
+  invitedBy?: string
+  joinedAt?: string
 }
 
 type AuthContextType = {
   user: User | null
   userData: UserData | null
+  adminData: AdminData | null
+  isAdmin: boolean
   loading: boolean
   refreshUserData: () => Promise<void>
   logout: () => Promise<void>
@@ -57,77 +54,128 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType)
 
-// These paths don't require auth
-const PUBLIC_PATHS = ['/']
 const ALWAYS_ALLOWED = (path: string) =>
-  PUBLIC_PATHS.includes(path) || path.startsWith('/availability')
+  path === '/' || path.startsWith('/availability') || path.startsWith('/admin/join')
+
+async function seedAdminIfNeeded(user: User): Promise<AdminData | null> {
+  const email = user.email ?? ''
+  const seededRole = SEEDED_ADMINS[email]
+  const ref = doc(db, 'adminTeam', user.uid)
+  const snap = await getDoc(ref)
+
+  if (snap.exists()) {
+    return { uid: user.uid, ...(snap.data() as Omit<AdminData, 'uid'>) }
+  }
+
+  if (seededRole) {
+    // First login for a seeded admin — auto-create their record
+    const record: Omit<AdminData, 'uid'> = {
+      email,
+      displayName: user.displayName ?? '',
+      role: seededRole,
+      joinedAt: new Date().toISOString(),
+    }
+    await setDoc(ref, { ...record, seeded: true, createdAt: serverTimestamp() })
+    return { uid: user.uid, ...record }
+  }
+
+  return null
+}
+
+async function fetchOrCreateUser(user: User): Promise<UserData> {
+  const ref = doc(db, 'users', user.uid)
+  const snap = await getDoc(ref)
+
+  if (!snap.exists()) {
+    const fresh: Omit<UserData, 'uid'> = {
+      email: user.email ?? '',
+      displayName: user.displayName ?? '',
+      plan: 'free',
+      meetingsUsed: 0,
+    }
+    await setDoc(ref, { ...fresh, createdAt: serverTimestamp() })
+    return { uid: user.uid, ...fresh }
+  }
+
+  return { uid: user.uid, ...(snap.data() as Omit<UserData, 'uid'>) }
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [userData, setUserData] = useState<UserData | null>(null)
+  const [adminData, setAdminData] = useState<AdminData | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const pathname = usePathname()
 
-  const fetchUserData = async (firebaseUser: User): Promise<UserData> => {
-    const ref = doc(db, 'users', firebaseUser.uid)
-    const snap = await getDoc(ref)
-
-    if (!snap.exists()) {
-      const fresh: Omit<UserData, 'uid'> = {
-        email: firebaseUser.email ?? '',
-        displayName: firebaseUser.displayName ?? '',
-        plan: 'free',
-        meetingsUsed: 0,
-        isAdmin: false,
-      }
-      await setDoc(ref, { ...fresh, createdAt: serverTimestamp() })
-      return { uid: firebaseUser.uid, ...fresh }
-    }
-
-    return { uid: firebaseUser.uid, ...(snap.data() as Omit<UserData, 'uid'>) }
-  }
-
   const refreshUserData = async () => {
     if (!user) return
-    const data = await fetchUserData(user)
+    const data = await fetchOrCreateUser(user)
     setUserData(data)
+  }
+
+  const logout = async () => {
+    await signOut(auth)
+    setUser(null)
+    setUserData(null)
+    setAdminData(null)
+    router.replace('/')
   }
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser)
-        const data = await fetchUserData(firebaseUser)
-        setUserData(data)
 
-        // Route guard
-        if (!ALWAYS_ALLOWED(pathname)) {
-          if (data.plan === 'free' && pathname !== '/activate') {
-            router.replace('/activate')
-          } else if (data.isAdmin === false && pathname.startsWith('/admin')) {
-            router.replace('/dashboard')
+        // Check if this person is on the admin team
+        const admin = await seedAdminIfNeeded(firebaseUser)
+        setAdminData(admin)
+
+        if (admin) {
+          // Admin user — send to /admin unless already there or on join page
+          if (!pathname.startsWith('/admin')) {
+            router.replace('/admin')
+          }
+        } else {
+          // Regular user
+          const data = await fetchOrCreateUser(firebaseUser)
+          setUserData(data)
+
+          if (!ALWAYS_ALLOWED(pathname)) {
+            if (data.plan === 'free' && pathname !== '/activate') {
+              router.replace('/activate')
+            } else if (data.plan !== 'free' && pathname === '/activate') {
+              router.replace('/dashboard')
+            }
           }
         }
       } else {
         setUser(null)
         setUserData(null)
+        setAdminData(null)
         if (!ALWAYS_ALLOWED(pathname)) {
           router.replace('/')
         }
       }
+
       setLoading(false)
     })
+
     return unsub
   }, [pathname])
 
-  const logout = async () => {
-    await signOut(auth)
-    router.replace('/')
-  }
-
   return (
-    <AuthContext.Provider value={{ user, userData, loading, refreshUserData, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        userData,
+        adminData,
+        isAdmin: !!adminData,
+        loading,
+        refreshUserData,
+        logout,
+      }}
+    >
       {loading ? (
         <div className="min-h-screen flex items-center justify-center bg-white">
           <div className="flex flex-col items-center gap-3">
