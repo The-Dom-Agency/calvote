@@ -2,30 +2,34 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { AdminAuthProvider, useAdminAuth } from '@/contexts/AdminAuthContext'
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/admin-config'
 import { LogOut, LayoutDashboard, Users, Tag, UserCog } from 'lucide-react'
 
 const navItems = [
-  { label: 'Overview', path: '/admin', icon: LayoutDashboard, exact: true },
-  { label: 'Users', path: '/admin/users', icon: Users },
+  { label: 'Overview',    path: '/admin',        icon: LayoutDashboard, exact: true },
+  { label: 'Users',       path: '/admin/users',  icon: Users },
   { label: 'Promo Codes', path: '/admin/promos', icon: Tag },
-  { label: 'Team', path: '/admin/team', icon: UserCog },
+  { label: 'Team',        path: '/admin/team',   icon: UserCog },
 ]
 
-export default function AdminPanelLayout({ children }: { children: React.ReactNode }) {
+function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { adminData, logout } = useAuth()
+  const { adminData, logout } = useAdminAuth()
 
-  const role = adminData?.role ?? 'teammate'
+  // On public admin pages (login, join) don't render the sidebar
+  if (pathname === '/admin/login' || pathname.startsWith('/admin/join')) {
+    return <>{children}</>
+  }
+
+  const role     = adminData?.role ?? 'teammate'
   const initials = (adminData?.displayName || adminData?.email || '?')
-    .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+    .split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex">
       {/* Sidebar */}
       <aside className="w-60 bg-[#1C2B3A] text-white flex flex-col fixed h-full z-40">
-        {/* Logo */}
         <div className="px-5 py-5 border-b border-white/10">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-[#1A5C52] rounded-lg flex items-center justify-center shrink-0">
@@ -38,7 +42,6 @@ export default function AdminPanelLayout({ children }: { children: React.ReactNo
           </div>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1">
           {navItems.map(item => {
             const isActive = item.exact ? pathname === item.path : pathname.startsWith(item.path)
@@ -60,7 +63,6 @@ export default function AdminPanelLayout({ children }: { children: React.ReactNo
           })}
         </nav>
 
-        {/* Profile */}
         <div className="px-4 py-4 border-t border-white/10">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-9 h-9 rounded-full bg-[#1A5C52] flex items-center justify-center text-xs font-bold shrink-0">
@@ -82,10 +84,17 @@ export default function AdminPanelLayout({ children }: { children: React.ReactNo
         </div>
       </aside>
 
-      {/* Main content */}
       <main className="ml-60 flex-1 px-8 py-8 min-h-screen">
         {children}
       </main>
     </div>
+  )
+}
+
+export default function AdminPanelLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <AdminAuthProvider>
+      <AdminShell>{children}</AdminShell>
+    </AdminAuthProvider>
   )
 }

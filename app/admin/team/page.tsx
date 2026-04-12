@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { collection, getDocs, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAdminAuth } from '@/contexts/AdminAuthContext'
 import { ROLE_PERMISSIONS, ROLE_LABELS, ROLE_COLORS, type AdminRole } from '@/lib/admin-config'
 import { toast } from 'sonner'
 import { Copy, Link2, Lock, UserPlus } from 'lucide-react'
@@ -28,7 +28,7 @@ type Invite = {
 }
 
 export default function TeamPage() {
-  const { adminData } = useAuth()
+  const { adminData } = useAdminAuth()
   const role = adminData?.role ?? 'teammate'
   const can = ROLE_PERMISSIONS[role]
 

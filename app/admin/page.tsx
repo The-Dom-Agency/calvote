@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react'
 import { collection, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAdminAuth } from '@/contexts/AdminAuthContext'
 import { Users, Tag, Gift, TrendingUp } from 'lucide-react'
 
 export default function AdminOverviewPage() {
-  const { adminData } = useAuth()
+  const { adminData } = useAdminAuth()
   const [stats, setStats] = useState({ users: 0, activeCodes: 0, usedCodes: 0, paidUsers: 0 })
 
   useEffect(() => {

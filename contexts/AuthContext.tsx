@@ -3,10 +3,9 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
+// AdminData type and seedAdminIfNeeded moved to AdminAuthContext
 import { auth, db } from '@/lib/firebase'
 import { useRouter, usePathname } from 'next/navigation'
-import { SEEDED_ADMINS, type AdminRole } from '@/lib/admin-config'
-
 export type Plan = 'free' | 'starter' | 'growth' | 'scale'
 
 export const PLAN_LABELS: Record<Plan, string> = {
@@ -33,20 +32,9 @@ export type UserData = {
   googleCalendar?: { connected: boolean; email?: string }
 }
 
-export type AdminData = {
-  uid: string
-  email: string
-  displayName: string
-  role: AdminRole
-  invitedBy?: string
-  joinedAt?: string
-}
-
 type AuthContextType = {
   user: User | null
   userData: UserData | null
-  adminData: AdminData | null
-  isAdmin: boolean
   loading: boolean
   refreshUserData: () => Promise<void>
   logout: () => Promise<void>
@@ -55,32 +43,8 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType>({} as AuthContextType)
 
 const ALWAYS_ALLOWED = (path: string) =>
-  path === '/' || path === '/login' || path.startsWith('/availability') || path.startsWith('/admin/join')
+  path === '/' || path === '/login' || path.startsWith('/admin') || path.startsWith('/availability')
 
-async function seedAdminIfNeeded(user: User): Promise<AdminData | null> {
-  const email = user.email ?? ''
-  const seededRole = SEEDED_ADMINS[email]
-  const ref = doc(db, 'adminTeam', user.uid)
-  const snap = await getDoc(ref)
-
-  if (snap.exists()) {
-    return { uid: user.uid, ...(snap.data() as Omit<AdminData, 'uid'>) }
-  }
-
-  if (seededRole) {
-    // First login for a seeded admin — auto-create their record
-    const record: Omit<AdminData, 'uid'> = {
-      email,
-      displayName: user.displayName ?? '',
-      role: seededRole,
-      joinedAt: new Date().toISOString(),
-    }
-    await setDoc(ref, { ...record, seeded: true, createdAt: serverTimestamp() })
-    return { uid: user.uid, ...record }
-  }
-
-  return null
-}
 
 async function fetchOrCreateUser(user: User): Promise<UserData> {
   const ref = doc(db, 'users', user.uid)
@@ -103,7 +67,6 @@ async function fetchOrCreateUser(user: User): Promise<UserData> {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [userData, setUserData] = useState<UserData | null>(null)
-  const [adminData, setAdminData] = useState<AdminData | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const pathname = usePathname()
@@ -118,7 +81,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signOut(auth)
     setUser(null)
     setUserData(null)
-    setAdminData(null)
     router.replace('/login')
   }
 
@@ -126,33 +88,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser)
+        const data = await fetchOrCreateUser(firebaseUser)
+        setUserData(data)
 
-        // Check if this person is on the admin team
-        const admin = await seedAdminIfNeeded(firebaseUser)
-        setAdminData(admin)
-
-        if (admin) {
-          // Admin user — send to /admin unless already there or on join page
-          if (!pathname.startsWith('/admin')) {
-            router.replace('/admin')
-          }
-        } else {
-          // Regular user
-          const data = await fetchOrCreateUser(firebaseUser)
-          setUserData(data)
-
-          if (!ALWAYS_ALLOWED(pathname)) {
-            if (data.plan === 'free' && pathname !== '/activate') {
-              router.replace('/activate')
-            } else if (data.plan !== 'free' && pathname === '/activate') {
-              router.replace('/dashboard')
-            }
+        if (!ALWAYS_ALLOWED(pathname)) {
+          if (data.plan === 'free' && pathname !== '/activate') {
+            router.replace('/activate')
+          } else if (data.plan !== 'free' && pathname === '/activate') {
+            router.replace('/dashboard')
           }
         }
       } else {
         setUser(null)
         setUserData(null)
-        setAdminData(null)
         if (!ALWAYS_ALLOWED(pathname)) {
           router.replace('/login')
         }
@@ -169,8 +117,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         userData,
-        adminData,
-        isAdmin: !!adminData,
         loading,
         refreshUserData,
         logout,

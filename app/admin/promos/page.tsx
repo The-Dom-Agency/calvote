@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { collection, getDocs, addDoc, updateDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAdminAuth } from '@/contexts/AdminAuthContext'
 import { ROLE_PERMISSIONS } from '@/lib/admin-config'
 import type { Plan } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
@@ -26,7 +26,7 @@ function generateCode() {
 }
 
 export default function PromosPage() {
-  const { adminData } = useAuth()
+  const { adminData } = useAdminAuth()
   const role = adminData?.role ?? 'teammate'
   const can = ROLE_PERMISSIONS[role]
 

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Bell, LogOut, LayoutDashboard, Users, CalendarPlus, Smartphone, ShieldCheck } from 'lucide-react'
+import { Bell, LogOut, LayoutDashboard, Users, CalendarPlus, Smartphone } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 const navItems = [
@@ -14,7 +14,7 @@ const navItems = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { userData, adminData, isAdmin, logout } = useAuth()
+  const { userData, logout } = useAuth()
 
   const initials = (userData?.displayName || userData?.email || '?')
     .split(' ')
@@ -53,15 +53,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </Link>
               )
             })}
-            {isAdmin && (
-              <Link
-                href="/admin"
-                className="flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium hover:bg-white/8 text-[#C49A2A]"
-              >
-                <ShieldCheck size={16} />
-                Admin
-              </Link>
-            )}
           </div>
         </div>
 
