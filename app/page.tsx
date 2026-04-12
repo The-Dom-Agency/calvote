@@ -69,9 +69,11 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="px-8 py-6 border-t border-[#E5E7EB] flex items-center justify-between text-xs text-[#9CA3AF]">
         <span>© {new Date().getFullYear()} calvote. All rights reserved.</span>
-        <a href="mailto:hello@calvote.ai" className="hover:text-[#1C2B3A] transition-colors">
-          hello@calvote.ai
-        </a>
+        <div className="flex items-center gap-4">
+          <Link href="/privacy" className="hover:text-[#1C2B3A] transition-colors">Privacy Policy</Link>
+          <Link href="/terms" className="hover:text-[#1C2B3A] transition-colors">Terms of Use</Link>
+          <a href="mailto:hello@calvote.ai" className="hover:text-[#1C2B3A] transition-colors">hello@calvote.ai</a>
+        </div>
       </footer>
     </div>
   )

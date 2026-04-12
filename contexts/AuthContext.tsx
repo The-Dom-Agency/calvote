@@ -43,7 +43,8 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType>({} as AuthContextType)
 
 const ALWAYS_ALLOWED = (path: string) =>
-  path === '/' || path === '/login' || path.startsWith('/admin') || path.startsWith('/availability')
+  path === '/' || path === '/login' || path === '/privacy' || path === '/terms' ||
+  path.startsWith('/admin') || path.startsWith('/availability')
 
 
 async function fetchOrCreateUser(user: User): Promise<UserData> {
