@@ -29,15 +29,19 @@ export default function DashboardPage() {
   const { userData } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
 
-  // Handle Google Calendar OAuth callback messages
+  // Handle Google Calendar OAuth callback messages — run once on mount only
   useEffect(() => {
-    if (searchParams.get('calendar') === 'connected') {
+    const calendar = searchParams.get('calendar')
+    const error = searchParams.get('error')
+    if (calendar === 'connected') {
       toast.success('Google Calendar connected successfully!')
-    }
-    if (searchParams.get('error') === 'calendar_auth_failed' || searchParams.get('error') === 'calendar_token_failed') {
+      router.replace('/dashboard')
+    } else if (error === 'calendar_auth_failed' || error === 'calendar_token_failed') {
       toast.error('Calendar connection failed. Please try again.')
+      router.replace('/dashboard')
     }
-  }, [searchParams])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const meetingsUsed = userData?.meetingsUsed ?? 0
   const meetingLimit = PLAN_LIMITS[userData?.plan ?? 'free']

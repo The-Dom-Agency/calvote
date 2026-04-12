@@ -14,15 +14,9 @@ import {
   Check,
 } from 'lucide-react'
 
-type Contact = { id: number; name: string; calendarLinked: boolean; email: string }
+type Contact = { id: string; name: string; calendarLinked: boolean; email: string }
 
-const allContacts: Contact[] = [
-  { id: 1, name: 'Travis Barker', calendarLinked: true, email: 'travis@example.com' },
-  { id: 2, name: 'Selena Gomez', calendarLinked: true, email: 'selena@example.com' },
-  { id: 3, name: 'Justin Bieber', calendarLinked: false, email: 'justin@example.com' },
-  { id: 4, name: 'Ariana Grande', calendarLinked: true, email: 'ariana@example.com' },
-  { id: 5, name: 'Dua Lipa', calendarLinked: false, email: 'dua@example.com' },
-]
+const allContacts: Contact[] = []
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const TODAY = new Date()
@@ -59,11 +53,7 @@ export default function ScheduleMeetingPage() {
       next = [...selectedAttendees, contact]
     }
     setSelectedAttendees(next)
-
-    const allLinked = next.length > 0 && next.every(a => {
-      const full = allContacts.find(c => c.id === a.id)
-      return full?.calendarLinked
-    })
+    const allLinked = next.length > 0 && next.every(a => a.calendarLinked)
     setSuggestedTime(allLinked ? { date: 'April 15, 2026', time: '2:00 PM' } : null)
   }
 
@@ -325,7 +315,7 @@ export default function ScheduleMeetingPage() {
           </button>
           <button
             type="submit"
-            className="flex-2 bg-[#1A5C52] text-white font-bold py-4 px-8 rounded-xl hover:bg-[#1A5C52]/90 transition-all shadow-lg shadow-[#1A5C52]/20"
+            className="flex-[2] bg-[#1A5C52] text-white font-bold py-4 px-8 rounded-xl hover:bg-[#1A5C52]/90 transition-all shadow-lg shadow-[#1A5C52]/20"
           >
             Preview &amp; Send →
           </button>
