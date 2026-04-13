@@ -99,6 +99,19 @@ export default function ScheduleMeetingPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    const primaryContact = allContacts.find(c => c.id === primaryPersonId)
+    sessionStorage.setItem('meetingDraft', JSON.stringify({
+      title: formData.title,
+      description: formData.description,
+      timeFrom: formData.timeFrom,
+      timeTo: formData.timeTo,
+      schedulingRule: formData.schedulingRule,
+      sendVia: formData.sendVia,
+      attendees: selectedAttendees,
+      dates: selectedDates,
+      primaryPersonId,
+      primaryPersonName: primaryPersonId === 'me' ? 'You' : (primaryContact?.name ?? ''),
+    }))
     router.push('/preview')
   }
 
