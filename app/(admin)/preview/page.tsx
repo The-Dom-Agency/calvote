@@ -102,20 +102,30 @@ export default function PreviewMeetingPage() {
 
       // Send email to each attendee
       const attendeesWithEmail = draft.attendees.filter(a => a.email)
-      await Promise.allSettled(
-        attendeesWithEmail.map(attendee =>
-          fetch('/api/email/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              uid: user.uid,
-              to: attendee.email,
-              subject: `Meeting Invitation: ${draft.title}`,
-              html: buildMeetingInviteEmail({ draft, attendeeName: attendee.name }),
-            }),
+      if (attendeesWithEmail.length > 0) {
+        const results = await Promise.allSettled(
+          attendeesWithEmail.map(async attendee => {
+            const res = await fetch('/api/email/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                uid: user.uid,
+                to: attendee.email,
+                subject: `Meeting Invitation: ${draft.title}`,
+                html: buildMeetingInviteEmail({ draft, attendeeName: attendee.name }),
+              }),
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || 'Send failed')
+            return data
           })
         )
-      )
+        const failed = results.filter(r => r.status === 'rejected')
+        if (failed.length > 0) {
+          const reason = (failed[0] as PromiseRejectedResult).reason?.message
+          toast.error(`Email failed: ${reason}`, { id: 'email-error' })
+        }
+      }
 
       toast.success('Meeting requests sent successfully!', { id: 'meeting-sent' })
       sessionStorage.removeItem('meetingDraft')
