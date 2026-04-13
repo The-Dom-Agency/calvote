@@ -360,15 +360,28 @@ export default function DashboardPage() {
                     <div key={meeting.id} className="p-4 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] hover:border-[#1A5C52]/30 transition-colors">
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <p className="text-sm font-bold text-[#1C2B3A] leading-tight">{meeting.title}</p>
-                        {meeting.status === 'confirmed' ? (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#1A5C52]/10 text-[#1A5C52] shrink-0 uppercase tracking-wide">
-                            Confirmed
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#C49A2A]/10 text-[#C49A2A] shrink-0 uppercase tracking-wide">
-                            Pending
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {meeting.status === 'confirmed' ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#1A5C52]/10 text-[#1A5C52] uppercase tracking-wide">
+                              Confirmed
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#C49A2A]/10 text-[#C49A2A] uppercase tracking-wide">
+                              Pending
+                            </span>
+                          )}
+                          <button
+                            onClick={async () => {
+                              if (!user) return
+                              await deleteDoc(doc(db, 'users', user.uid, 'meetings', meeting.id))
+                              toast.success('Meeting deleted.')
+                            }}
+                            className="p-1 text-[#9CA3AF] hover:text-[#EF4444] hover:bg-[#FEF2F2] rounded transition-colors"
+                            title="Delete meeting"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </div>
                       <div className="flex items-center gap-3 text-xs text-[#6B7280] mb-3">
                         <span className="flex items-center gap-1">
