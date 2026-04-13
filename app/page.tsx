@@ -31,12 +31,11 @@ export default function LandingPage() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
-          <a
-            href="mailto:hello@calvote.ai?subject=Book a Demo"
+          <button
             className="px-8 py-4 rounded-xl bg-[#1A5C52] text-white font-semibold text-base hover:bg-[#154d44] active:scale-[0.98] transition-all shadow-sm"
           >
             Book a Demo
-          </a>
+          </button>
           <Link
             href="/login"
             className="px-8 py-4 rounded-xl border border-[#E5E7EB] text-[#1C2B3A] font-semibold text-base hover:bg-[#F9FAFB] active:scale-[0.98] transition-all"
@@ -72,7 +71,6 @@ export default function LandingPage() {
         <div className="flex items-center gap-4">
           <Link href="/privacy" className="hover:text-[#1C2B3A] transition-colors">Privacy Policy</Link>
           <Link href="/terms" className="hover:text-[#1C2B3A] transition-colors">Terms of Use</Link>
-          <a href="mailto:hello@calvote.ai" className="hover:text-[#1C2B3A] transition-colors">hello@calvote.ai</a>
         </div>
       </footer>
     </div>
