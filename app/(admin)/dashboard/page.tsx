@@ -56,6 +56,7 @@ export default function DashboardPage() {
   const [showInviteMenu, setShowInviteMenu] = useState(false)
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [calendarMenuOpen, setCalendarMenuOpen] = useState<string | null>(null)
 
   // Load contacts from Firestore
   useEffect(() => {
@@ -101,6 +102,21 @@ export default function DashboardPage() {
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.email.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  const disconnectCalendar = async () => {
+    if (!user) return
+    try {
+      await import('firebase/firestore').then(({ updateDoc, doc }) =>
+        updateDoc(doc(db, 'users', user.uid), {
+          googleCalendar: { connected: false, email: null, accessToken: null, refreshToken: null },
+        })
+      )
+      setCalendarMenuOpen(null)
+      toast.success('Calendar disconnected.')
+    } catch {
+      toast.error('Failed to disconnect.')
+    }
+  }
 
   const copyInviteLink = async (contact: Contact) => {
     if (!user) return
@@ -182,7 +198,7 @@ export default function DashboardPage() {
             <div className="space-y-3">
               {/* Your own calendar */}
               {calendarConnected ? (
-                <div className="space-y-2">
+                <div className="relative">
                   <div className="flex items-center justify-between p-3.5 bg-[#F0FDF9] rounded-xl border border-[#1A5C52]/20">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-8 h-8 bg-white rounded-lg border border-[#1A5C52]/20 flex items-center justify-center shrink-0">
@@ -193,17 +209,29 @@ export default function DashboardPage() {
                         <p className="text-[10px] text-[#6B7280]">You · Google Calendar</p>
                       </div>
                     </div>
-                    <div className="w-6 h-6 bg-[#1A5C52] rounded-full flex items-center justify-center shrink-0 ml-2">
+                    <button
+                      onClick={() => setCalendarMenuOpen(v => v === 'me' ? null : 'me')}
+                      className="w-6 h-6 bg-[#1A5C52] rounded-full flex items-center justify-center shrink-0 ml-2 hover:bg-[#154d44] transition-colors"
+                    >
                       <Power size={11} className="text-white" />
-                    </div>
+                    </button>
                   </div>
-                  <a
-                    href={`/api/google-calendar/connect?state=${userData?.uid}`}
-                    className="flex items-center justify-center gap-1.5 py-2 text-[10px] font-medium text-[#6B7280] hover:text-[#1A5C52] transition-colors"
-                  >
-                    <RefreshCw size={11} />
-                    Reconnect to update permissions
-                  </a>
+                  {calendarMenuOpen === 'me' && (
+                    <div className="absolute right-0 top-full mt-1 bg-white border border-[#E5E7EB] rounded-xl shadow-lg z-20 overflow-hidden w-44">
+                      <a
+                        href={`/api/google-calendar/connect?state=${userData?.uid}`}
+                        className="flex items-center gap-2 px-4 py-3 text-xs font-medium text-[#1C2B3A] hover:bg-[#F9FAFB] transition-colors"
+                      >
+                        <RefreshCw size={13} className="text-[#1A5C52]" /> Reconnect
+                      </a>
+                      <button
+                        onClick={disconnectCalendar}
+                        className="w-full flex items-center gap-2 px-4 py-3 text-xs font-medium text-[#EF4444] hover:bg-[#FEF2F2] transition-colors"
+                      >
+                        <Power size={13} /> Disconnect
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <a
@@ -217,19 +245,43 @@ export default function DashboardPage() {
 
               {/* Linked contacts' calendars */}
               {linkedContacts.map(contact => (
-                <div key={contact.id} className="flex items-center justify-between p-3.5 bg-[#F0FDF9] rounded-xl border border-[#1A5C52]/20">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 bg-[#1A5C52]/10 rounded-full flex items-center justify-center shrink-0 text-[#1A5C52] font-bold text-xs">
-                      {contact.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                <div key={contact.id} className="relative">
+                  <div className="flex items-center justify-between p-3.5 bg-[#F0FDF9] rounded-xl border border-[#1A5C52]/20">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 bg-[#1A5C52]/10 rounded-full flex items-center justify-center shrink-0 text-[#1A5C52] font-bold text-xs">
+                        {contact.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-[#1C2B3A] truncate">{contact.name}</p>
+                        <p className="text-[10px] text-[#6B7280] truncate">{contact.calendarEmail || 'Google Calendar'}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-[#1C2B3A] truncate">{contact.name}</p>
-                      <p className="text-[10px] text-[#6B7280] truncate">{contact.calendarEmail || 'Google Calendar'}</p>
+                    <button
+                      onClick={() => setCalendarMenuOpen(v => v === contact.id ? null : contact.id)}
+                      className="w-6 h-6 bg-[#1A5C52] rounded-full flex items-center justify-center shrink-0 ml-2 hover:bg-[#154d44] transition-colors"
+                    >
+                      <Power size={11} className="text-white" />
+                    </button>
+                  </div>
+                  {calendarMenuOpen === contact.id && (
+                    <div className="absolute right-0 top-full mt-1 bg-white border border-[#E5E7EB] rounded-xl shadow-lg z-20 overflow-hidden w-44">
+                      <button
+                        onClick={async () => {
+                          if (!user) return
+                          await import('firebase/firestore').then(({ updateDoc, doc }) =>
+                            updateDoc(doc(db, 'users', user.uid, 'contacts', contact.id), {
+                              calendarLinked: false, calendarEmail: null, accessToken: null, refreshToken: null,
+                            })
+                          )
+                          setCalendarMenuOpen(null)
+                          toast.success(`${contact.name}'s calendar disconnected.`)
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-3 text-xs font-medium text-[#EF4444] hover:bg-[#FEF2F2] transition-colors"
+                      >
+                        <Power size={13} /> Disconnect
+                      </button>
                     </div>
-                  </div>
-                  <div className="w-6 h-6 bg-[#1A5C52] rounded-full flex items-center justify-center shrink-0 ml-2">
-                    <Power size={11} className="text-white" />
-                  </div>
+                  )}
                 </div>
               ))}
 
