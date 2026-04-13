@@ -146,7 +146,7 @@ export default function ActivatePage() {
               <label className="text-sm font-medium text-[#1C2B3A]">Promo Code</label>
               <input
                 type="text"
-                placeholder="e.g. CALVOTE-XXXX-XXXX"
+                placeholder="e.g. CV-XXXX-XXXX"
                 value={code}
                 onChange={e => setCode(e.target.value.toUpperCase())}
                 required
@@ -166,8 +166,8 @@ export default function ActivatePage() {
           <div className="mt-6 pt-5 border-t border-[#E5E7EB] text-center">
             <p className="text-xs text-[#6B7280] mb-3">
               Need a promo code? Contact{' '}
-              <a href="mailto:hello@calvote.ai" className="text-[#1A5C52] font-semibold hover:underline">
-                hello@calvote.ai
+              <a href="mailto:design@thedomagency.com" className="text-[#1A5C52] font-semibold hover:underline">
+                design@thedomagency.com
               </a>
             </p>
             <button

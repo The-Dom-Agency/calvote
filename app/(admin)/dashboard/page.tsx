@@ -23,6 +23,10 @@ import {
   X,
   CheckCheck,
   HelpCircle,
+  BookOpen,
+  UserPlus,
+  CalendarCheck,
+  Bell,
 } from 'lucide-react'
 import { collection, onSnapshot, deleteDoc, doc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -94,6 +98,7 @@ export default function DashboardPage() {
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [calendarMenuOpen, setCalendarMenuOpen] = useState<string | null>(null)
+  const [showGuide, setShowGuide] = useState(true)
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null)
   const [responses, setResponses] = useState<{ id: string; attendeeName: string; selectedSlots: string[] }[]>([])
   const [loadingResponses, setLoadingResponses] = useState(false)
@@ -234,6 +239,89 @@ export default function DashboardPage() {
         </Link>
       </div>
 
+      {/* How to Use */}
+      {showGuide && (
+        <div className="bg-gradient-to-br from-[#1A5C52]/5 to-[#C49A2A]/5 border border-[#1A5C52]/15 rounded-2xl p-5 sm:p-6">
+          <div className="flex items-start justify-between gap-3 mb-5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 bg-[#1A5C52] rounded-lg flex items-center justify-center shrink-0">
+                <BookOpen size={15} className="text-white" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-[#1C2B3A]">How to Use calvote</h2>
+                <p className="text-[11px] text-[#6B7280]">Follow these steps to schedule your first meeting</p>
+              </div>
+            </div>
+            <button onClick={() => setShowGuide(false)} className="p-1 hover:bg-white/60 rounded-lg transition-colors shrink-0">
+              <X size={15} className="text-[#9CA3AF]" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              {
+                step: '01',
+                icon: UserPlus,
+                title: 'Add Contacts',
+                desc: 'Go to Contacts and add your team members or clients with their name and email.',
+                action: 'Go to Contacts →',
+                path: '/contacts',
+                color: 'text-[#1A5C52]',
+                bg: 'bg-[#1A5C52]/10',
+              },
+              {
+                step: '02',
+                icon: Calendar,
+                title: 'Connect Calendars',
+                desc: 'Connect your Google Calendar, then invite contacts to link theirs using the invite button.',
+                action: 'Connect Calendar →',
+                path: null,
+                color: 'text-[#C49A2A]',
+                bg: 'bg-[#C49A2A]/10',
+              },
+              {
+                step: '03',
+                icon: CalendarCheck,
+                title: 'Schedule a Meeting',
+                desc: 'Go to Schedule, pick attendees, dates & time range, then confirm and send invitations.',
+                action: 'Schedule Now →',
+                path: '/schedule',
+                color: 'text-[#3B82F6]',
+                bg: 'bg-[#3B82F6]/10',
+              },
+              {
+                step: '04',
+                icon: Bell,
+                title: 'Track Responses',
+                desc: 'Attendees receive an email to share their availability. Click any meeting here to see who responded.',
+                action: null,
+                path: null,
+                color: 'text-[#8B5CF6]',
+                bg: 'bg-[#8B5CF6]/10',
+              },
+            ].map((item) => (
+              <div key={item.step} className="bg-white rounded-xl p-4 border border-[#E5E7EB] flex flex-col gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-8 h-8 ${item.bg} rounded-lg flex items-center justify-center shrink-0`}>
+                    <item.icon size={15} className={item.color} />
+                  </div>
+                  <span className="text-[10px] font-black text-[#9CA3AF] tracking-widest">STEP {item.step}</span>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-[#1C2B3A] mb-1">{item.title}</p>
+                  <p className="text-[11px] text-[#6B7280] leading-relaxed">{item.desc}</p>
+                </div>
+                {item.action && (
+                  item.path
+                    ? <Link href={item.path} className={`text-[11px] font-bold ${item.color} hover:underline mt-auto`}>{item.action}</Link>
+                    : <button onClick={() => document.getElementById('connected-calendars')?.scrollIntoView({ behavior: 'smooth' })} className={`text-[11px] font-bold ${item.color} hover:underline mt-auto text-left`}>{item.action}</button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Plan Status Bar */}
       <div className="bg-white rounded-2xl border border-[#E5E7EB] p-4 sm:p-5 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -267,7 +355,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-1 space-y-6 sm:space-y-8">
 
           {/* Connected Calendars */}
-          <section className="bg-white rounded-2xl border border-[#E5E7EB] p-5 sm:p-6 shadow-sm">
+          <section id="connected-calendars" className="bg-white rounded-2xl border border-[#E5E7EB] p-5 sm:p-6 shadow-sm">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base sm:text-lg font-bold text-[#1C2B3A] flex items-center gap-2">
                 <Calendar className="text-[#1A5C52]" size={20} />
