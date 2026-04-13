@@ -2,13 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  doc,
-  getDoc,
-  updateDoc,
-  serverTimestamp,
-} from 'firebase/firestore'
-import { db } from '@/lib/firebase'
 import { useAuth, PLAN_LABELS, type Plan } from '@/contexts/AuthContext'
 import { Logo } from '@/components/Logo'
 import { toast } from 'sonner'
@@ -35,50 +28,25 @@ export default function ActivatePage() {
     setLoading(true)
 
     try {
-      const promoRef = doc(db, 'promoCodes', code.trim().toUpperCase())
-      const promoSnap = await getDoc(promoRef)
-
-      if (!promoSnap.exists()) {
-        toast.error('Invalid promo code. Please check and try again.')
-        setLoading(false)
-        return
-      }
-
-      const promo = promoSnap.data()
-
-      if (!promo.isActive) {
-        toast.error('This promo code has been deactivated.')
-        setLoading(false)
-        return
-      }
-
-      if (promo.usedBy) {
-        toast.error('This promo code has already been used.')
-        setLoading(false)
-        return
-      }
-
-      // Mark promo as used
-      await updateDoc(promoRef, {
-        usedBy: user.uid,
-        usedAt: serverTimestamp(),
-        isActive: false,
+      const res = await fetch('/api/promo/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code.trim(), uid: user.uid }),
       })
 
-      // Update user's plan
-      await updateDoc(doc(db, 'users', user.uid), {
-        plan: promo.plan,
-        promoUsed: code.trim().toUpperCase(),
-        activatedAt: serverTimestamp(),
-      })
+      const data = await res.json()
+
+      if (!res.ok || data.error) {
+        toast.error(data.error || 'Something went wrong. Please try again.')
+        return
+      }
 
       await refreshUserData()
-      setActivatedPlan(promo.plan as Plan)
+      setActivatedPlan(data.plan as Plan)
       setActivated(true)
       toast.success('Promo code activated!')
-    } catch (err) {
+    } catch {
       toast.error('Something went wrong. Please try again.')
-      console.error(err)
     } finally {
       setLoading(false)
     }
