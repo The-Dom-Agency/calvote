@@ -44,7 +44,7 @@ type Meeting = {
   description?: string
   timeFrom: string
   timeTo: string
-  attendees: { id: string; name: string }[]
+  attendees: { id: string; name: string; email?: string }[]
   dates: string[]
   status: 'pending' | 'confirmed'
   createdAt?: { seconds: number }
