@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Bell, LogOut, LayoutDashboard, Users, CalendarPlus, Smartphone } from 'lucide-react'
+import { Bell, LogOut, LayoutDashboard, Users, CalendarPlus } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Logo } from '@/components/Logo'
 
@@ -10,7 +10,6 @@ const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'Contacts', path: '/contacts', icon: Users },
   { name: 'Schedule', path: '/schedule', icon: CalendarPlus },
-  { name: 'Preview', path: '/availability/demo-meeting', icon: Smartphone },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
