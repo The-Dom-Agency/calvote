@@ -27,4 +27,6 @@ function getAdminApp(): App {
 
 export const adminDb = {
   collection: (path: string) => getFirestore(getAdminApp()).collection(path),
+  runTransaction: <T>(fn: (tx: FirebaseFirestore.Transaction) => Promise<T>) =>
+    getFirestore(getAdminApp()).runTransaction(fn),
 }
