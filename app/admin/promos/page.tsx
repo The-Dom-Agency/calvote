@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
 import { useAdminAuth } from '@/contexts/AdminAuthContext'
 import { ROLE_PERMISSIONS } from '@/lib/admin-config'
 import type { Plan } from '@/contexts/AuthContext'
@@ -14,11 +12,11 @@ type PromoCode = {
   code: string
   plan: Plan
   isActive: boolean
-  maxUses: number        // -1 = unlimited
+  maxUses: number
   usedCount: number
   usedBy: string[]
   notes?: string
-  createdAt?: { seconds: number }
+  createdAt?: { seconds: number } | null
 }
 
 function generateCode() {
@@ -72,21 +70,9 @@ export default function PromosPage() {
 
   const fetchPromos = useCallback(async () => {
     setLoading(true)
-    const snap = await getDocs(query(collection(db, 'promoCodes'), orderBy('createdAt', 'desc')))
-    setPromos(snap.docs.map(d => {
-      const data = d.data()
-      return {
-        id: d.id,
-        code: data.code,
-        plan: data.plan,
-        isActive: data.isActive ?? true,
-        maxUses: data.maxUses ?? 1,
-        usedCount: data.usedCount ?? (data.usedBy && !Array.isArray(data.usedBy) && data.usedBy ? 1 : (Array.isArray(data.usedBy) ? data.usedBy.length : 0)),
-        usedBy: Array.isArray(data.usedBy) ? data.usedBy : (data.usedBy ? [data.usedBy] : []),
-        notes: data.notes,
-        createdAt: data.createdAt,
-      } as PromoCode
-    }))
+    const res = await fetch('/api/admin/promos')
+    const data = await res.json()
+    setPromos(data.promos ?? [])
     setLoading(false)
   }, [])
 
@@ -96,27 +82,29 @@ export default function PromosPage() {
     if (!can.canGeneratePromos) return
     setCreating(true)
     const code = generateCode()
-    await addDoc(collection(db, 'promoCodes'), {
-      code,
-      plan: newPlan,
-      isActive: true,
-      maxUses: newMaxUses,
-      usedCount: 0,
-      usedBy: [],
-      notes: newNotes,
-      createdBy: adminData?.uid,
-      createdAt: serverTimestamp(),
+    const res = await fetch('/api/admin/promos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, plan: newPlan, maxUses: newMaxUses, notes: newNotes, createdBy: adminData?.uid }),
     })
-    toast.success(`Created: ${code}`)
-    setNewNotes('')
-    await fetchPromos()
+    if (res.ok) {
+      toast.success(`Created: ${code}`)
+      setNewNotes('')
+      await fetchPromos()
+    } else {
+      toast.error('Failed to create promo code.')
+    }
     setCreating(false)
   }
 
   const toggle = async (p: PromoCode) => {
     const exhausted = p.maxUses !== -1 && p.usedCount >= p.maxUses
     if (!can.canGeneratePromos || exhausted) return
-    await updateDoc(doc(db, 'promoCodes', p.id), { isActive: !p.isActive })
+    await fetch('/api/admin/promos', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: p.id, isActive: !p.isActive }),
+    })
     toast.success(p.isActive ? 'Deactivated' : 'Activated')
     await fetchPromos()
   }
@@ -124,7 +112,11 @@ export default function PromosPage() {
   const remove = async (p: PromoCode) => {
     if (!can.canGeneratePromos) return
     if (!confirm(`Delete promo code ${p.code}? This cannot be undone.`)) return
-    await deleteDoc(doc(db, 'promoCodes', p.id))
+    await fetch('/api/admin/promos', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: p.id }),
+    })
     toast.success(`Deleted ${p.code}`)
     await fetchPromos()
   }
@@ -135,7 +127,6 @@ export default function PromosPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-[#1C2B3A]">Promo Codes</h1>
 
-      {/* Generate */}
       {can.canGeneratePromos ? (
         <div className="bg-white rounded-2xl border border-[#E5E7EB] p-6 shadow-sm">
           <h2 className="text-base font-bold text-[#1C2B3A] mb-4 flex items-center gap-2">
@@ -151,7 +142,6 @@ export default function PromosPage() {
               <option value="growth">Growth — 1,000/mo</option>
               <option value="scale">Scale — 2,000/mo</option>
             </select>
-
             <select
               value={newMaxUses}
               onChange={e => setNewMaxUses(Number(e.target.value))}
@@ -161,7 +151,6 @@ export default function PromosPage() {
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
-
             <input
               type="text"
               placeholder="Notes (optional) e.g. Acme Corp"
@@ -169,7 +158,6 @@ export default function PromosPage() {
               onChange={e => setNewNotes(e.target.value)}
               className="px-4 py-2.5 rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] text-sm focus:outline-none focus:ring-2 focus:ring-[#1A5C52]/20 focus:border-[#1A5C52]"
             />
-
             <button
               onClick={create}
               disabled={creating}
@@ -186,7 +174,6 @@ export default function PromosPage() {
         </div>
       )}
 
-      {/* Table */}
       <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-sm overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-[#F9FAFB] border-b border-[#E5E7EB]">
@@ -219,7 +206,7 @@ export default function PromosPage() {
                   <td className="px-5 py-3.5">{statusBadge(p)}</td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-2">
-                      <button onClick={() => copy(p.code)} className="p-1.5 hover:bg-[#F3F4F6] rounded-lg text-[#6B7280] transition-colors" title="Copy code">
+                      <button onClick={() => copy(p.code)} className="p-1.5 hover:bg-[#F3F4F6] rounded-lg text-[#6B7280] transition-colors" title="Copy">
                         <Copy size={14} />
                       </button>
                       {can.canGeneratePromos && !exhausted && (
