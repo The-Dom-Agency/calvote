@@ -1,3 +1,4 @@
+// calvote root layout
 import type { Metadata } from 'next'
 import { Toaster } from 'sonner'
 import { AuthProvider } from '@/contexts/AuthContext'
