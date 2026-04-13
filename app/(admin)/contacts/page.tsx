@@ -21,6 +21,7 @@ import {
   addDoc,
   deleteDoc,
   doc,
+  updateDoc,
   onSnapshot,
   serverTimestamp,
 } from 'firebase/firestore'
@@ -47,6 +48,8 @@ export default function ContactsPage() {
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', phone: '' })
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({ name: '', email: '', phone: '' })
 
   // Load contacts from Firestore
   useEffect(() => {
@@ -92,6 +95,26 @@ export default function ContactsPage() {
     if (!user) return
     await deleteDoc(doc(db, 'users', user.uid, 'contacts', id))
     toast.success('Contact removed.')
+  }
+
+  const startEdit = (contact: Contact) => {
+    setEditingId(contact.id)
+    setEditForm({ name: contact.name, email: contact.email, phone: contact.phone || '' })
+  }
+
+  const saveEdit = async (id: string) => {
+    if (!user || !editForm.name || !editForm.email) return
+    try {
+      await updateDoc(doc(db, 'users', user.uid, 'contacts', id), {
+        name: editForm.name,
+        email: editForm.email,
+        phone: editForm.phone,
+      })
+      setEditingId(null)
+      toast.success('Contact updated.')
+    } catch {
+      toast.error('Failed to update contact.')
+    }
   }
 
   const copyInviteLink = async (contact: Contact) => {
@@ -208,64 +231,110 @@ export default function ContactsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map(contact => (
             <div key={contact.id} className="bg-white rounded-2xl border border-[#E5E7EB] p-5 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#1A5C52]/10 text-[#1A5C52] flex items-center justify-center font-bold text-sm">
-                    {contact.name.split(' ').map(n => n[0]).join('')}
+              {editingId === contact.id ? (
+                /* Inline edit form */
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={editForm.name}
+                    onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
+                    placeholder="Full name *"
+                    className="w-full px-3 py-2 rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] text-sm focus:outline-none focus:ring-2 focus:ring-[#1A5C52]/20 focus:border-[#1A5C52]"
+                  />
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))}
+                    placeholder="Email *"
+                    className="w-full px-3 py-2 rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] text-sm focus:outline-none focus:ring-2 focus:ring-[#1A5C52]/20 focus:border-[#1A5C52]"
+                  />
+                  <input
+                    type="tel"
+                    value={editForm.phone}
+                    onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))}
+                    placeholder="Phone"
+                    className="w-full px-3 py-2 rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] text-sm focus:outline-none focus:ring-2 focus:ring-[#1A5C52]/20 focus:border-[#1A5C52]"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => saveEdit(contact.id)}
+                      className="flex-1 bg-[#1A5C52] text-white text-xs font-semibold py-2 rounded-lg hover:bg-[#1A5C52]/90 transition-colors"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="flex-1 bg-[#F3F4F6] text-[#6B7280] text-xs font-semibold py-2 rounded-lg hover:bg-[#E5E7EB] transition-colors"
+                    >
+                      Cancel
+                    </button>
                   </div>
-                  <div>
-                    <p className="font-bold text-[#1C2B3A] text-sm">{contact.name}</p>
-                    {contact.calendarLinked ? (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-[#1A5C52]/10 text-[#1A5C52] flex items-center gap-1 w-fit">
-                        <CheckCircle2 size={9} /> Calendar Linked
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-[#F3F4F6] text-[#6B7280]">
-                        No Calendar
-                      </span>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-[#1A5C52]/10 text-[#1A5C52] flex items-center justify-center font-bold text-sm shrink-0">
+                        {contact.name.split(' ').map(n => n[0]).join('')}
+                      </div>
+                      <div>
+                        <p className="font-bold text-[#1C2B3A] text-sm">{contact.name}</p>
+                        {contact.calendarLinked ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-[#1A5C52]/10 text-[#1A5C52] flex items-center gap-1 w-fit">
+                            <CheckCircle2 size={9} /> Calendar Linked
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-[#F3F4F6] text-[#6B7280]">
+                            No Calendar
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <button
+                        onClick={() => startEdit(contact)}
+                        className="p-1.5 hover:bg-[#F9FAFB] rounded-lg transition-colors text-[#6B7280] hover:text-[#1A5C52]"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        onClick={() => remove(contact.id)}
+                        className="p-1.5 hover:bg-[#F9FAFB] rounded-lg transition-colors text-[#6B7280] hover:text-[#EF4444]"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="flex items-center gap-2 text-xs text-[#6B7280]">
+                      <Mail size={12} className="shrink-0" />{contact.email}
+                    </p>
+                    {contact.phone && (
+                      <p className="flex items-center gap-2 text-xs text-[#6B7280]">
+                        <Phone size={12} className="shrink-0" />{contact.phone}
+                      </p>
+                    )}
+                    {contact.calendarLinked && contact.calendarEmail && (
+                      <p className="flex items-center gap-2 text-xs text-[#1A5C52]">
+                        <Calendar size={12} className="shrink-0" />{contact.calendarEmail}
+                      </p>
                     )}
                   </div>
-                </div>
-                <div className="flex gap-1">
-                  <button className="p-1.5 hover:bg-[#F9FAFB] rounded-lg transition-colors text-[#6B7280] hover:text-[#1A5C52]">
-                    <Edit2 size={14} />
-                  </button>
-                  <button
-                    onClick={() => remove(contact.id)}
-                    className="p-1.5 hover:bg-[#F9FAFB] rounded-lg transition-colors text-[#6B7280] hover:text-[#EF4444]"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <p className="flex items-center gap-2 text-xs text-[#6B7280]">
-                  <Mail size={12} className="shrink-0" />{contact.email}
-                </p>
-                {contact.phone && (
-                  <p className="flex items-center gap-2 text-xs text-[#6B7280]">
-                    <Phone size={12} className="shrink-0" />{contact.phone}
-                  </p>
-                )}
-                {contact.calendarLinked && contact.calendarEmail && (
-                  <p className="flex items-center gap-2 text-xs text-[#1A5C52]">
-                    <Calendar size={12} className="shrink-0" />{contact.calendarEmail}
-                  </p>
-                )}
-              </div>
-
-              {!contact.calendarLinked && (
-                <button
-                  onClick={() => copyInviteLink(contact)}
-                  className="mt-4 w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed border-[#E5E7EB] text-xs text-[#6B7280] hover:border-[#1A5C52] hover:text-[#1A5C52] transition-colors"
-                >
-                  {copiedId === contact.id ? (
-                    <><CheckCircle2 size={12} className="text-[#1A5C52]" /> Link copied!</>
-                  ) : (
-                    <><Link2 size={12} /> Copy calendar invite link</>
+                  {!contact.calendarLinked && (
+                    <button
+                      onClick={() => copyInviteLink(contact)}
+                      className="mt-4 w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed border-[#E5E7EB] text-xs text-[#6B7280] hover:border-[#1A5C52] hover:text-[#1A5C52] transition-colors"
+                    >
+                      {copiedId === contact.id ? (
+                        <><CheckCircle2 size={12} className="text-[#1A5C52]" /> Link copied!</>
+                      ) : (
+                        <><Link2 size={12} /> Copy calendar invite link</>
+                      )}
+                    </button>
                   )}
-                </button>
+                </>
               )}
             </div>
           ))}

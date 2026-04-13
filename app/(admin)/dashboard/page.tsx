@@ -20,7 +20,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react'
-import { collection, onSnapshot } from 'firebase/firestore'
+import { collection, onSnapshot, deleteDoc, doc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth, PLAN_LABELS, PLAN_LIMITS } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
@@ -324,10 +324,22 @@ export default function DashboardPage() {
                         </td>
                         <td className="px-4 sm:px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2 text-[#6B7280]">
-                            <button className="p-1 hover:text-[#1A5C52] hover:bg-[#F9FAFB] rounded transition-colors">
+                            <button
+                              onClick={() => router.push('/contacts')}
+                              className="p-1 hover:text-[#1A5C52] hover:bg-[#F9FAFB] rounded transition-colors"
+                              title="Edit contact"
+                            >
                               <Edit2 size={15} />
                             </button>
-                            <button className="p-1 hover:text-[#EF4444] hover:bg-[#F9FAFB] rounded transition-colors">
+                            <button
+                              onClick={async () => {
+                                if (!user) return
+                                await deleteDoc(doc(db, 'users', user.uid, 'contacts', contact.id))
+                                toast.success('Contact removed.')
+                              }}
+                              className="p-1 hover:text-[#EF4444] hover:bg-[#F9FAFB] rounded transition-colors"
+                              title="Delete contact"
+                            >
                               <Trash2 size={15} />
                             </button>
                           </div>
