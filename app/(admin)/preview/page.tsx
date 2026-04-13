@@ -15,7 +15,7 @@ import {
   Mail,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, addDoc, setDoc, doc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -39,8 +39,7 @@ function fmt12(t: string) {
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`
 }
 
-function buildMeetingInviteEmail({ draft, attendeeName }: { draft: MeetingDraft; attendeeName: string }) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://calvote.ai'
+function buildMeetingInviteEmail({ draft, attendeeName, availabilityLink }: { draft: MeetingDraft; attendeeName: string; availabilityLink: string }) {
   return `
     <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#fff;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">
       <div style="background:#1A5C52;padding:24px 32px;">
@@ -59,7 +58,7 @@ function buildMeetingInviteEmail({ draft, attendeeName }: { draft: MeetingDraft;
           <p style="color:#1C2B3A;font-size:13px;margin:0;">🕐 ${fmt12(draft.timeFrom)} – ${fmt12(draft.timeTo)}</p>
         </div>
         <p style="color:#6B7280;font-size:13px;margin:0 0 20px;">Please share your availability so we can find the best time for everyone.</p>
-        <a href="${appUrl}/availability/demo-meeting" style="display:inline-block;background:#1A5C52;color:#fff;font-weight:700;font-size:14px;padding:12px 28px;border-radius:8px;text-decoration:none;">
+        <a href="${availabilityLink}" style="display:inline-block;background:#1A5C52;color:#fff;font-weight:700;font-size:14px;padding:12px 28px;border-radius:8px;text-decoration:none;">
           Provide Availability
         </a>
       </div>
@@ -85,7 +84,7 @@ export default function PreviewMeetingPage() {
     if (!draft || !user) return
     setIsSending(true)
     try {
-      await addDoc(collection(db, 'users', user.uid, 'meetings'), {
+      const meetingData = {
         title: draft.title,
         description: draft.description,
         timeFrom: draft.timeFrom,
@@ -96,11 +95,21 @@ export default function PreviewMeetingPage() {
         dates: draft.dates,
         primaryPersonId: draft.primaryPersonId,
         primaryPersonName: draft.primaryPersonName,
+        ownerUid: user.uid,
         status: 'pending',
         createdAt: serverTimestamp(),
-      })
+      }
 
-      // Send email to each attendee
+      // Save to user's meetings and capture the ID
+      const meetingRef = await addDoc(collection(db, 'users', user.uid, 'meetings'), meetingData)
+      const meetingId = meetingRef.id
+
+      // Save to publicMeetings so the availability page can read it without auth
+      await setDoc(doc(db, 'publicMeetings', meetingId), meetingData)
+
+      // Send email to each attendee with the real meeting link
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://calvote.ai'
+      const availabilityLink = `${appUrl}/availability/${meetingId}`
       const attendeesWithEmail = draft.attendees.filter(a => a.email)
       if (attendeesWithEmail.length > 0) {
         const results = await Promise.allSettled(
@@ -112,7 +121,7 @@ export default function PreviewMeetingPage() {
                 uid: user.uid,
                 to: attendee.email,
                 subject: `Meeting Invitation: ${draft.title}`,
-                html: buildMeetingInviteEmail({ draft, attendeeName: attendee.name }),
+                html: buildMeetingInviteEmail({ draft, attendeeName: attendee.name, availabilityLink }),
               }),
             })
             const data = await res.json()
