@@ -20,6 +20,9 @@ import {
   ChevronUp,
   Send,
   RefreshCw,
+  X,
+  CheckCheck,
+  HelpCircle,
 } from 'lucide-react'
 import { collection, onSnapshot, deleteDoc, doc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -57,6 +60,9 @@ export default function DashboardPage() {
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [calendarMenuOpen, setCalendarMenuOpen] = useState<string | null>(null)
+  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null)
+  const [responses, setResponses] = useState<{ id: string; attendeeName: string; selectedSlots: string[] }[]>([])
+  const [loadingResponses, setLoadingResponses] = useState(false)
 
   // Load contacts from Firestore
   useEffect(() => {
@@ -102,6 +108,21 @@ export default function DashboardPage() {
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.email.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  const openMeeting = async (meeting: Meeting) => {
+    setSelectedMeeting(meeting)
+    setLoadingResponses(true)
+    setResponses([])
+    try {
+      const res = await fetch(`/api/meetings/${meeting.id}/responses`)
+      const data = await res.json()
+      setResponses(data.responses ?? [])
+    } catch {
+      toast.error('Failed to load responses.')
+    } finally {
+      setLoadingResponses(false)
+    }
+  }
 
   const disconnectCalendar = async () => {
     if (!user) return
@@ -357,7 +378,7 @@ export default function DashboardPage() {
                 {meetings
                   .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0))
                   .map(meeting => (
-                    <div key={meeting.id} className="p-4 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] hover:border-[#1A5C52]/30 transition-colors">
+                    <div key={meeting.id} onClick={() => openMeeting(meeting)} className="p-4 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] hover:border-[#1A5C52]/30 transition-colors cursor-pointer">
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <p className="text-sm font-bold text-[#1C2B3A] leading-tight">{meeting.title}</p>
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -371,9 +392,11 @@ export default function DashboardPage() {
                             </span>
                           )}
                           <button
-                            onClick={async () => {
+                            onClick={async (e) => {
+                              e.stopPropagation()
                               if (!user) return
                               await deleteDoc(doc(db, 'users', user.uid, 'meetings', meeting.id))
+                              if (selectedMeeting?.id === meeting.id) setSelectedMeeting(null)
                               toast.success('Meeting deleted.')
                             }}
                             className="p-1 text-[#9CA3AF] hover:text-[#EF4444] hover:bg-[#FEF2F2] rounded transition-colors"
@@ -531,6 +554,117 @@ export default function DashboardPage() {
           </section>
         </div>
       </div>
+
+      {/* Meeting Detail Slide-over */}
+      {selectedMeeting && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/30 z-40 backdrop-blur-sm"
+            onClick={() => setSelectedMeeting(null)}
+          />
+          {/* Panel */}
+          <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="p-5 border-b border-[#E5E7EB] flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs text-[#6B7280] font-medium mb-0.5">Meeting Details</p>
+                <h2 className="text-base font-bold text-[#1C2B3A] leading-snug">{selectedMeeting.title}</h2>
+                <div className="flex items-center gap-3 mt-1 text-xs text-[#6B7280]">
+                  <span className="flex items-center gap-1"><Calendar size={11} /> {selectedMeeting.dates.length} date{selectedMeeting.dates.length !== 1 ? 's' : ''}</span>
+                  <span className="flex items-center gap-1"><Clock size={11} /> {selectedMeeting.timeFrom} – {selectedMeeting.timeTo}</span>
+                </div>
+              </div>
+              <button onClick={() => setSelectedMeeting(null)} className="p-1.5 hover:bg-[#F3F4F6] rounded-lg transition-colors shrink-0">
+                <X size={18} className="text-[#6B7280]" />
+              </button>
+            </div>
+
+            {/* Status badge */}
+            <div className="px-5 py-3 border-b border-[#E5E7EB] flex items-center justify-between">
+              <span className="text-xs text-[#6B7280]">Status</span>
+              {selectedMeeting.status === 'confirmed'
+                ? <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#1A5C52]/10 text-[#1A5C52] uppercase tracking-wide">Confirmed</span>
+                : <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#C49A2A]/10 text-[#C49A2A] uppercase tracking-wide">Pending</span>
+              }
+            </div>
+
+            {/* Responses */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              <div>
+                <h3 className="text-xs font-bold text-[#1C2B3A] uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Users size={13} className="text-[#1A5C52]" />
+                  Attendee Responses
+                  {!loadingResponses && (
+                    <span className="text-[#6B7280] font-normal normal-case tracking-normal">
+                      ({responses.length} of {selectedMeeting.attendees.length} responded)
+                    </span>
+                  )}
+                </h3>
+
+                {loadingResponses ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-6 h-6 border-2 border-[#1A5C52] border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {selectedMeeting.attendees.map(attendee => {
+                      const response = responses.find(r =>
+                        r.attendeeName.toLowerCase().trim() === attendee.name.toLowerCase().trim()
+                      )
+                      return (
+                        <div key={attendee.id} className="rounded-xl border border-[#E5E7EB] overflow-hidden">
+                          <div className={`flex items-center justify-between px-4 py-3 ${response ? 'bg-[#F0FDF9]' : 'bg-[#F9FAFB]'}`}>
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-8 h-8 rounded-full bg-[#1A5C52]/10 text-[#1A5C52] flex items-center justify-center font-bold text-xs shrink-0">
+                                {attendee.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-[#1C2B3A] truncate">{attendee.name}</p>
+                                {attendee.email && <p className="text-[10px] text-[#6B7280] truncate">{attendee.email}</p>}
+                              </div>
+                            </div>
+                            {response
+                              ? <CheckCheck size={16} className="text-[#1A5C52] shrink-0 ml-2" />
+                              : <HelpCircle size={16} className="text-[#9CA3AF] shrink-0 ml-2" />
+                            }
+                          </div>
+
+                          {response && response.selectedSlots.length > 0 && (
+                            <div className="px-4 py-3 border-t border-[#E5E7EB] space-y-1.5">
+                              <p className="text-[10px] font-bold text-[#1A5C52] uppercase tracking-wide mb-2">Available slots</p>
+                              {response.selectedSlots.map((slot, i) => {
+                                const lastDash = slot.lastIndexOf('-')
+                                const date = slot.substring(0, lastDash)
+                                const time = slot.substring(lastDash + 1)
+                                return (
+                                  <div key={i} className="flex items-center gap-2 text-xs text-[#374151] bg-white rounded-lg px-3 py-2 border border-[#E5E7EB]">
+                                    <Calendar size={11} className="text-[#6B7280] shrink-0" />
+                                    <span className="truncate">{date}</span>
+                                    <span className="text-[#9CA3AF]">·</span>
+                                    <Clock size={11} className="text-[#6B7280] shrink-0" />
+                                    <span className="shrink-0 font-medium">{time}</span>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+
+                          {!response && (
+                            <div className="px-4 py-2 border-t border-[#E5E7EB]">
+                              <p className="text-[11px] text-[#9CA3AF] italic">Awaiting response...</p>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
