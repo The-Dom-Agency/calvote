@@ -22,74 +22,103 @@ export default function PrivacyPage() {
         <div className="prose prose-slate max-w-none space-y-10 text-[#374151] leading-relaxed">
 
           <section>
-            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">1. Introduction</h2>
-            <p>calvote (&quot;we&quot;, &quot;our&quot;, or &quot;us&quot;) operates calvote.ai, a smart scheduling platform. This Privacy Policy explains how we collect, use, and protect your information when you use our service.</p>
+            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">What calvote Does</h2>
+            <p>calvote is a team scheduling platform that connects your Google Calendar, manages your contacts, and coordinates meeting availability across your team. It sends meeting invitations and calendar connection requests via your connected Gmail account.</p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">2. Information We Collect</h2>
-            <p className="mb-3"><strong>Account information:</strong> When you sign in with Google, we receive your name, email address, and profile picture from Google.</p>
-            <p className="mb-3"><strong>Calendar data:</strong> If you connect Google Calendar, we access your calendar events and availability solely to enable scheduling features. We do not store the content of your calendar events.</p>
-            <p className="mb-3"><strong>Usage data:</strong> We collect information about how you use the platform, including meetings scheduled and features accessed.</p>
-            <p><strong>Contact information:</strong> Phone numbers you or your invitees provide for SMS reminders.</p>
-          </section>
+            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">Information We Collect</h2>
 
-          <section>
-            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">3. How We Use Your Information</h2>
+            <p className="font-semibold text-[#1C2B3A] mt-4 mb-1">Account Information</p>
+            <p>When you sign in with Google, we collect your name, email address, and profile picture to create and identify your calvote account.</p>
+
+            <p className="font-semibold text-[#1C2B3A] mt-4 mb-1">Contacts</p>
+            <p>You may add contacts (name, email, phone number) to your account. This information is stored in our database and is used solely to enable scheduling and calendar connection features within your account.</p>
+
+            <p className="font-semibold text-[#1C2B3A] mt-4 mb-1">Meeting Data</p>
+            <p>When you schedule a meeting, we store the meeting title, description, selected dates, time window, attendee list, and scheduling preferences. This data is used to manage your meeting requests and availability coordination.</p>
+
+            <p className="font-semibold text-[#1C2B3A] mt-4 mb-1">Google Calendar &amp; Gmail Access</p>
+            <p className="mb-2">If you choose to connect your Google account, calvote requests the following permissions:</p>
             <ul className="list-disc pl-5 space-y-2">
-              <li>To provide and operate the scheduling service</li>
-              <li>To read your Google Calendar availability and schedule meetings on your behalf</li>
-              <li>To send SMS reminders via Twilio to you and your invitees</li>
-              <li>To manage your account, plan, and usage</li>
-              <li>To improve and develop the platform</li>
-              <li>To communicate important service updates</li>
+              <li><strong>calendar.readonly</strong> — to read your calendar availability and exclude busy times when presenting options to invitees.</li>
+              <li><strong>calendar.events.readonly</strong> — to read existing events for availability checking.</li>
+              <li><strong>gmail.send</strong> — to send meeting invitations and calendar connection requests from your Gmail account to your contacts.</li>
+              <li><strong>openid, email, profile</strong> — to identify your Google account and display your email address.</li>
             </ul>
+            <p className="mt-3">We do not read your emails, modify your calendar, delete events, or access any data beyond what is listed above. OAuth tokens are stored securely in our database and are deleted when you disconnect your Google account.</p>
+
+            <p className="font-semibold text-[#1C2B3A] mt-4 mb-1">Invite Tokens</p>
+            <p>When you invite a contact to connect their calendar, we generate a unique, single-use token stored in our database. This token is used only to link that contact&apos;s calendar to your account upon their consent.</p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">4. Google API Usage</h2>
-            <p className="mb-3">calvote's use of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy" className="text-[#1A5C52] underline" target="_blank" rel="noopener noreferrer">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
-            <p>We use Google Calendar data only to display your availability and create calendar events. We do not use this data for advertising, sell it to third parties, or use it for any purpose unrelated to scheduling.</p>
+            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">How We Use Your Information</h2>
+            <ul className="list-disc pl-5 space-y-2">
+              <li>To authenticate you and maintain your account</li>
+              <li>To display and manage your contacts and meetings</li>
+              <li>To send meeting invitation emails to your attendees via your Gmail account</li>
+              <li>To send calendar connection invitations to your contacts via your Gmail account</li>
+              <li>To check calendar availability when scheduling meetings</li>
+            </ul>
+            <p className="mt-3">We do not use your data for advertising, analytics profiling, or any purpose beyond operating the platform features described above.</p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">5. Third-Party Services</h2>
+            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">Google API Usage</h2>
+            <p>calvote&apos;s use of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy" className="text-[#1A5C52] underline" target="_blank" rel="noopener noreferrer">Google API Services User Data Policy</a>, including the Limited Use requirements. Google user data is never used for advertising, resold, or shared with third parties.</p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">Data Storage</h2>
+            <p>Your data — account info, contacts, meetings, and OAuth tokens — is stored in Google Firebase Firestore, a secure cloud database. Data is associated with your individual account and protected by Firebase security rules.</p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">Google User Data — Retention and Deletion</h2>
+            <ul className="list-disc pl-5 space-y-2">
+              <li>OAuth tokens are stored only as long as your Google Calendar remains connected to calvote.</li>
+              <li>You can disconnect your Google account at any time from the dashboard, which removes your stored tokens.</li>
+              <li>You can also revoke access directly at <a href="https://myaccount.google.com/permissions" className="text-[#1A5C52] underline" target="_blank" rel="noopener noreferrer">Google Account Permissions</a>.</li>
+              <li>If you delete your calvote account, all associated data — including contacts, meetings, and OAuth tokens — is permanently deleted.</li>
+              <li>Google user data is never used for advertising, resold, or shared with third parties.</li>
+            </ul>
+            <p className="mt-3">To request deletion of your data, contact us at <a href="mailto:design@thedomagency.com" className="text-[#1A5C52] underline">design@thedomagency.com</a>. We will respond within 30 days.</p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">Third-Party Services</h2>
             <ul className="list-disc pl-5 space-y-2">
               <li><strong>Firebase (Google):</strong> Authentication and database storage</li>
-              <li><strong>Google Calendar API:</strong> Calendar access and event creation</li>
+              <li><strong>Google Calendar &amp; Gmail API:</strong> Calendar access and email sending</li>
               <li><strong>Twilio:</strong> SMS notifications and reminders</li>
               <li><strong>Vercel:</strong> Application hosting and infrastructure</li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">6. Data Retention</h2>
-            <p>We retain your account data for as long as your account is active. Calendar tokens are stored securely and can be revoked at any time from your Google Account settings or within calvote. You may request deletion of your account and data by contacting us.</p>
+            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">Data Sharing</h2>
+            <p>We do not sell, share, or transfer your data to third parties. The only external communications are between our servers and Google&apos;s Calendar and Gmail APIs to perform features you have authorized, and between your browser and Firebase for real-time data sync.</p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">7. Data Security</h2>
-            <p>We use industry-standard security measures including encrypted connections (HTTPS), Firebase security rules, and secure token storage. We never store Google account passwords.</p>
+            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">Data Security</h2>
+            <p>We use industry-standard security measures including HTTPS, Firebase security rules, and Google&apos;s OAuth 2.0 protocol. OAuth tokens are stored server-side and never exposed to the browser. We never store Google account passwords.</p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">8. Your Rights</h2>
-            <p>You may disconnect Google Calendar access at any time. You may request access to, correction of, or deletion of your personal data by contacting us at <a href="mailto:hello@calvote.ai" className="text-[#1A5C52] underline">hello@calvote.ai</a>.</p>
+            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">Children&apos;s Privacy</h2>
+            <p>calvote is not intended for individuals under the age of 13. We do not knowingly collect information from children under 13.</p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">9. Children&apos;s Privacy</h2>
-            <p>calvote is not directed at children under 13. We do not knowingly collect personal information from children under 13.</p>
+            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">Changes to This Policy</h2>
+            <p>We may update this Privacy Policy from time to time. Changes will be reflected on this page with an updated date. Continued use of the platform after changes constitutes acceptance of the updated policy.</p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">10. Changes to This Policy</h2>
-            <p>We may update this Privacy Policy from time to time. We will notify you of significant changes by posting the new policy on this page with an updated date.</p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">11. Contact</h2>
-            <p>For questions about this Privacy Policy, contact us at <a href="mailto:hello@calvote.ai" className="text-[#1A5C52] underline">hello@calvote.ai</a>.</p>
+            <h2 className="text-xl font-semibold text-[#1C2B3A] mb-3">Contact</h2>
+            <p>If you have questions about this Privacy Policy, contact us at <a href="mailto:design@thedomagency.com" className="text-[#1A5C52] underline">design@thedomagency.com</a>.</p>
           </section>
 
         </div>
