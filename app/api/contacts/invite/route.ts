@@ -98,10 +98,11 @@ export async function POST(req: NextRequest) {
           link,
         })
 
+        const inviteSubject = `=?UTF-8?B?${Buffer.from("You've been invited to connect your calendar", 'utf-8').toString('base64')}?=`
         const lines = [
           `From: ${gc.email}`,
           `To: ${contactEmail}`,
-          `Subject: You've been invited to connect your calendar`,
+          `Subject: ${inviteSubject}`,
           'MIME-Version: 1.0',
           'Content-Type: text/html; charset=UTF-8',
           '',

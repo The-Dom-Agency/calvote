@@ -19,10 +19,13 @@ function buildRawEmail({
   subject: string
   html: string
 }) {
+  // Encode subject using RFC 2047 to safely handle special/unicode characters
+  const encodedSubject = `=?UTF-8?B?${Buffer.from(subject, 'utf-8').toString('base64')}?=`
+
   const lines = [
     `From: ${from}`,
     `To: ${to}`,
-    `Subject: ${subject}`,
+    `Subject: ${encodedSubject}`,
     'MIME-Version: 1.0',
     'Content-Type: text/html; charset=UTF-8',
     '',

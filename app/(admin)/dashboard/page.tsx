@@ -157,7 +157,7 @@ export default function DashboardPage() {
           body: JSON.stringify({
             uid: user.uid,
             to: attendee.email,
-            subject: `Reminder: Please share your availability — ${meeting.title}`,
+            subject: `Reminder: Please share your availability for ${meeting.title}`,
             html: buildResendEmail({ meeting, attendeeName: attendee.name, availabilityLink: `${appUrl}/availability/${meeting.id}?name=${encodeURIComponent(attendee.name)}` }),
           }),
         })
