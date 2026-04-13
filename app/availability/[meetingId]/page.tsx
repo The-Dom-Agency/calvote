@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, use } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Calendar,
   Clock,
@@ -55,10 +55,11 @@ function formatDayShort(dateStr: string) {
 export default function AvailabilityPage({ params }: { params: Promise<{ meetingId: string }> }) {
   const { meetingId } = use(params)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [meeting, setMeeting] = useState<Meeting | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
-  const [name, setName] = useState('')
+  const [name, setName] = useState(searchParams.get('name') ?? '')
   const [selectedSlots, setSelectedSlots] = useState<string[]>([])
   const [activeDateIndex, setActiveDateIndex] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -187,9 +188,10 @@ export default function AvailabilityPage({ params }: { params: Promise<{ meeting
           </label>
           <input
             type="text"
-            className="w-full px-4 py-3 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] focus:outline-none focus:ring-2 focus:ring-[#1A5C52]/20 focus:border-[#1A5C52] transition-all font-semibold text-sm"
+            className={`w-full px-4 py-3 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] focus:outline-none focus:ring-2 focus:ring-[#1A5C52]/20 focus:border-[#1A5C52] transition-all font-semibold text-sm ${searchParams.get('name') ? 'text-[#1A5C52] cursor-default' : ''}`}
             value={name}
-            onChange={e => setName(e.target.value)}
+            onChange={e => { if (!searchParams.get('name')) setName(e.target.value) }}
+            readOnly={!!searchParams.get('name')}
             placeholder="Enter your name"
           />
         </div>

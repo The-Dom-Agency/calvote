@@ -109,7 +109,9 @@ export default function PreviewMeetingPage() {
 
       // Send email to each attendee with the real meeting link
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://calvote.ai'
-      const availabilityLink = `${appUrl}/availability/${meetingId}`
+      // Each attendee gets a personalised link with their name pre-filled
+      const makeAvailabilityLink = (name: string) =>
+        `${appUrl}/availability/${meetingId}?name=${encodeURIComponent(name)}`
       const attendeesWithEmail = draft.attendees.filter(a => a.email)
       if (attendeesWithEmail.length > 0) {
         const results = await Promise.allSettled(
@@ -121,7 +123,7 @@ export default function PreviewMeetingPage() {
                 uid: user.uid,
                 to: attendee.email,
                 subject: `Meeting Invitation: ${draft.title}`,
-                html: buildMeetingInviteEmail({ draft, attendeeName: attendee.name, availabilityLink }),
+                html: buildMeetingInviteEmail({ draft, attendeeName: attendee.name, availabilityLink: makeAvailabilityLink(attendee.name) }),
               }),
             })
             const data = await res.json()
