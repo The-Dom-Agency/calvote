@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { AdminAuthProvider, useAdminAuth } from '@/contexts/AdminAuthContext'
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/admin-config'
 import { LogOut, LayoutDashboard, Users, Tag, UserCog } from 'lucide-react'
+import { Logo } from '@/components/Logo'
 
 const navItems = [
   { label: 'Overview',    path: '/admin',        icon: LayoutDashboard, exact: true },
@@ -31,15 +32,8 @@ function AdminShell({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside className="w-60 bg-[#1C2B3A] text-white flex flex-col fixed h-full z-40">
         <div className="px-5 py-5 border-b border-white/10">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#1A5C52] rounded-lg flex items-center justify-center shrink-0">
-              <div className="w-4 h-4 border-2 border-white rounded-sm rotate-45" />
-            </div>
-            <div>
-              <span className="font-bold text-lg tracking-tight">calvote</span>
-              <p className="text-[10px] text-white/40 leading-none mt-0.5">Admin Panel</p>
-            </div>
-          </div>
+          <Logo height={26} className="brightness-0 invert mb-1" />
+          <p className="text-[10px] text-white/40 leading-none mt-1.5">Admin Panel</p>
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1">

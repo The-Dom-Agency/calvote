@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Bell, LogOut, LayoutDashboard, Users, CalendarPlus, Smartphone } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { Logo } from '@/components/Logo'
 
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -29,12 +30,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <nav className="bg-[#1A5C52] text-white px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-6 lg:gap-10">
           <Link href="/dashboard" className="hover:opacity-90 transition-opacity">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shrink-0">
-                <div className="w-4 h-4 border-2 border-[#1A5C52] rounded-sm rotate-45" />
-              </div>
-              <span className="text-white font-bold text-xl tracking-tight">calvote</span>
-            </div>
+            <Logo height={28} className="brightness-0 invert" />
           </Link>
 
           {/* Desktop nav */}
