@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft,
@@ -13,10 +13,11 @@ import {
   Search,
   Check,
 } from 'lucide-react'
+import { collection, onSnapshot } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
+import { useAuth } from '@/contexts/AuthContext'
 
 type Contact = { id: string; name: string; calendarLinked: boolean; email: string }
-
-const allContacts: Contact[] = []
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const TODAY = new Date()
@@ -29,6 +30,8 @@ function buildCalendarDays(year: number, month: number) {
 
 export default function ScheduleMeetingPage() {
   const router = useRouter()
+  const { user } = useAuth()
+  const [allContacts, setAllContacts] = useState<Contact[]>([])
   const [selectedAttendees, setSelectedAttendees] = useState<Contact[]>([])
   const [showAttendeeSearch, setShowAttendeeSearch] = useState(false)
   const [selectedDates, setSelectedDates] = useState<string[]>([])
@@ -44,6 +47,18 @@ export default function ScheduleMeetingPage() {
   })
   const [suggestedTime, setSuggestedTime] = useState<{ date: string; time: string } | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Load contacts from Firestore
+  useEffect(() => {
+    if (!user) return
+    const ref = collection(db, 'users', user.uid, 'contacts')
+    return onSnapshot(ref, snap => {
+      setAllContacts(snap.docs.map(d => {
+        const data = d.data()
+        return { id: d.id, name: data.name, email: data.email, calendarLinked: data.calendarLinked ?? false }
+      }))
+    })
+  }, [user])
 
   const toggleAttendee = (contact: Contact) => {
     let next: Contact[]
