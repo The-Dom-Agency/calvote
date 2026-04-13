@@ -19,6 +19,7 @@ import {
   ChevronDown,
   ChevronUp,
   Send,
+  RefreshCw,
 } from 'lucide-react'
 import { collection, onSnapshot, deleteDoc, doc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -181,19 +182,28 @@ export default function DashboardPage() {
             <div className="space-y-3">
               {/* Your own calendar */}
               {calendarConnected ? (
-                <div className="flex items-center justify-between p-3.5 bg-[#F0FDF9] rounded-xl border border-[#1A5C52]/20">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 bg-white rounded-lg border border-[#1A5C52]/20 flex items-center justify-center shrink-0">
-                      <Calendar className="text-[#1A5C52]" size={15} />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-3.5 bg-[#F0FDF9] rounded-xl border border-[#1A5C52]/20">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 bg-white rounded-lg border border-[#1A5C52]/20 flex items-center justify-center shrink-0">
+                        <Calendar className="text-[#1A5C52]" size={15} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-[#1C2B3A] truncate">{userData?.googleCalendar?.email}</p>
+                        <p className="text-[10px] text-[#6B7280]">You · Google Calendar</p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-[#1C2B3A] truncate">{userData?.googleCalendar?.email}</p>
-                      <p className="text-[10px] text-[#6B7280]">You · Google Calendar</p>
+                    <div className="w-6 h-6 bg-[#1A5C52] rounded-full flex items-center justify-center shrink-0 ml-2">
+                      <Power size={11} className="text-white" />
                     </div>
                   </div>
-                  <div className="w-6 h-6 bg-[#1A5C52] rounded-full flex items-center justify-center shrink-0 ml-2">
-                    <Power size={11} className="text-white" />
-                  </div>
+                  <a
+                    href={`/api/google-calendar/connect?state=${userData?.uid}`}
+                    className="flex items-center justify-center gap-1.5 py-2 text-[10px] font-medium text-[#6B7280] hover:text-[#1A5C52] transition-colors"
+                  >
+                    <RefreshCw size={11} />
+                    Reconnect to update permissions
+                  </a>
                 </div>
               ) : (
                 <a
