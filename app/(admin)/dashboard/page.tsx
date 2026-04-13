@@ -270,19 +270,19 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base sm:text-lg font-bold text-[#1C2B3A] flex items-center gap-2">
                 <Send className="text-[#1A5C52]" size={18} />
-                Pending Meeting Requests
-                {meetings.filter(m => m.status === 'pending').length > 0 && (
-                  <span className="bg-[#C49A2A]/10 text-[#C49A2A] text-[10px] font-bold px-2 py-0.5 rounded-full">
-                    {meetings.filter(m => m.status === 'pending').length}
+                Recent Meetings
+                {meetings.length > 0 && (
+                  <span className="bg-[#1A5C52]/10 text-[#1A5C52] text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    {meetings.length}
                   </span>
                 )}
               </h2>
             </div>
 
-            {meetings.filter(m => m.status === 'pending').length === 0 ? (
+            {meetings.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Send className="text-[#E5E7EB] mb-2" size={32} />
-                <p className="text-sm text-[#6B7280]">No pending requests.</p>
+                <p className="text-sm text-[#6B7280]">No meetings yet.</p>
                 <button
                   onClick={() => router.push('/schedule')}
                   className="mt-3 text-xs text-[#1A5C52] font-semibold hover:underline"
@@ -293,15 +293,20 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-3">
                 {meetings
-                  .filter(m => m.status === 'pending')
                   .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0))
                   .map(meeting => (
                     <div key={meeting.id} className="p-4 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] hover:border-[#1A5C52]/30 transition-colors">
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <p className="text-sm font-bold text-[#1C2B3A] leading-tight">{meeting.title}</p>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#C49A2A]/10 text-[#C49A2A] shrink-0 uppercase tracking-wide">
-                          Pending
-                        </span>
+                        {meeting.status === 'confirmed' ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#1A5C52]/10 text-[#1A5C52] shrink-0 uppercase tracking-wide">
+                            Confirmed
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#C49A2A]/10 text-[#C49A2A] shrink-0 uppercase tracking-wide">
+                            Pending
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-[#6B7280] mb-3">
                         <span className="flex items-center gap-1">
@@ -324,7 +329,10 @@ export default function DashboardPage() {
                             <span className="text-[10px] text-[#6B7280]">+{meeting.attendees.length - 4}</span>
                           )}
                           <span className="text-[10px] text-[#6B7280] ml-1">
-                            waiting for {meeting.attendees.length} response{meeting.attendees.length !== 1 ? 's' : ''}
+                            {meeting.status === 'confirmed'
+                              ? `${meeting.attendees.length} attendee${meeting.attendees.length !== 1 ? 's' : ''}`
+                              : `waiting for ${meeting.attendees.length} response${meeting.attendees.length !== 1 ? 's' : ''}`
+                            }
                           </span>
                         </div>
                       )}
