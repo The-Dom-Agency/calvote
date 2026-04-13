@@ -15,6 +15,9 @@ import {
   Mail,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
+import { useAuth } from '@/contexts/AuthContext'
 
 type MeetingDraft = {
   title: string
@@ -38,23 +41,40 @@ function fmt12(t: string) {
 
 export default function PreviewMeetingPage() {
   const router = useRouter()
+  const { user } = useAuth()
   const [isSending, setIsSending] = useState(false)
   const [draft, setDraft] = useState<MeetingDraft | null>(null)
 
   useEffect(() => {
     const raw = sessionStorage.getItem('meetingDraft')
-    if (raw) {
-      setDraft(JSON.parse(raw))
-    }
+    if (raw) setDraft(JSON.parse(raw))
   }, [])
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
+    if (!draft || !user) return
     setIsSending(true)
-    setTimeout(() => {
-      toast.success('Meeting requests sent successfully!')
+    try {
+      await addDoc(collection(db, 'users', user.uid, 'meetings'), {
+        title: draft.title,
+        description: draft.description,
+        timeFrom: draft.timeFrom,
+        timeTo: draft.timeTo,
+        schedulingRule: draft.schedulingRule,
+        sendVia: draft.sendVia,
+        attendees: draft.attendees,
+        dates: draft.dates,
+        primaryPersonId: draft.primaryPersonId,
+        primaryPersonName: draft.primaryPersonName,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+      })
+      toast.success('Meeting requests sent successfully!', { id: 'meeting-sent' })
       sessionStorage.removeItem('meetingDraft')
       router.push('/confirmed')
-    }, 2500)
+    } catch {
+      toast.error('Failed to send meeting request.')
+      setIsSending(false)
+    }
   }
 
   if (!draft) {

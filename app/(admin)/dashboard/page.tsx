@@ -9,7 +9,6 @@ import {
   Search,
   Edit2,
   Trash2,
-  ExternalLink,
   Users,
   Clock,
   Zap,
@@ -19,6 +18,7 @@ import {
   Link2,
   ChevronDown,
   ChevronUp,
+  Send,
 } from 'lucide-react'
 import { collection, onSnapshot, deleteDoc, doc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -34,7 +34,17 @@ type Contact = {
   calendarEmail?: string
 }
 
-const recentMeetings: { title: string; date: string; time: string; attendees: number }[] = []
+type Meeting = {
+  id: string
+  title: string
+  description?: string
+  timeFrom: string
+  timeTo: string
+  attendees: { id: string; name: string }[]
+  dates: string[]
+  status: 'pending' | 'confirmed'
+  createdAt?: { seconds: number }
+}
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -43,6 +53,7 @@ export default function DashboardPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [contacts, setContacts] = useState<Contact[]>([])
   const [showInviteMenu, setShowInviteMenu] = useState(false)
+  const [meetings, setMeetings] = useState<Meeting[]>([])
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
   // Load contacts from Firestore
@@ -51,6 +62,15 @@ export default function DashboardPage() {
     const ref = collection(db, 'users', user.uid, 'contacts')
     return onSnapshot(ref, snap => {
       setContacts(snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Contact, 'id'>) })))
+    })
+  }, [user])
+
+  // Load meetings from Firestore
+  useEffect(() => {
+    if (!user) return
+    const ref = collection(db, 'users', user.uid, 'meetings')
+    return onSnapshot(ref, snap => {
+      setMeetings(snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Meeting, 'id'>) })))
     })
   }, [user])
 
@@ -249,14 +269,68 @@ export default function DashboardPage() {
           <section className="bg-white rounded-2xl border border-[#E5E7EB] p-5 sm:p-6 shadow-sm">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base sm:text-lg font-bold text-[#1C2B3A] flex items-center gap-2">
-                <Clock className="text-[#1A5C52]" size={20} />
-                Recent Meetings
+                <Send className="text-[#1A5C52]" size={18} />
+                Pending Meeting Requests
+                {meetings.filter(m => m.status === 'pending').length > 0 && (
+                  <span className="bg-[#C49A2A]/10 text-[#C49A2A] text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    {meetings.filter(m => m.status === 'pending').length}
+                  </span>
+                )}
               </h2>
             </div>
-            {recentMeetings.length === 0 && (
+
+            {meetings.filter(m => m.status === 'pending').length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Clock className="text-[#E5E7EB] mb-2" size={36} />
-                <p className="text-sm text-[#6B7280]">No meetings yet.</p>
+                <Send className="text-[#E5E7EB] mb-2" size={32} />
+                <p className="text-sm text-[#6B7280]">No pending requests.</p>
+                <button
+                  onClick={() => router.push('/schedule')}
+                  className="mt-3 text-xs text-[#1A5C52] font-semibold hover:underline"
+                >
+                  + Schedule a meeting
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {meetings
+                  .filter(m => m.status === 'pending')
+                  .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0))
+                  .map(meeting => (
+                    <div key={meeting.id} className="p-4 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] hover:border-[#1A5C52]/30 transition-colors">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <p className="text-sm font-bold text-[#1C2B3A] leading-tight">{meeting.title}</p>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#C49A2A]/10 text-[#C49A2A] shrink-0 uppercase tracking-wide">
+                          Pending
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-[#6B7280] mb-3">
+                        <span className="flex items-center gap-1">
+                          <Calendar size={11} />
+                          {meeting.dates.length} date{meeting.dates.length !== 1 ? 's' : ''}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock size={11} />
+                          {meeting.timeFrom} – {meeting.timeTo}
+                        </span>
+                      </div>
+                      {meeting.attendees.length > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          {meeting.attendees.slice(0, 4).map(a => (
+                            <div key={a.id} className="w-6 h-6 rounded-full bg-[#1A5C52]/10 text-[#1A5C52] flex items-center justify-center text-[9px] font-bold border border-white" title={a.name}>
+                              {a.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                            </div>
+                          ))}
+                          {meeting.attendees.length > 4 && (
+                            <span className="text-[10px] text-[#6B7280]">+{meeting.attendees.length - 4}</span>
+                          )}
+                          <span className="text-[10px] text-[#6B7280] ml-1">
+                            waiting for {meeting.attendees.length} response{meeting.attendees.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                }
               </div>
             )}
           </section>
