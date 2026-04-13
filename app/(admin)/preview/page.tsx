@@ -15,7 +15,7 @@ import {
   Mail,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { collection, addDoc, setDoc, doc, serverTimestamp } from 'firebase/firestore'
+import { collection, addDoc, setDoc, doc, updateDoc, increment, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -106,6 +106,11 @@ export default function PreviewMeetingPage() {
 
       // Save to publicMeetings so the availability page can read it without auth
       await setDoc(doc(db, 'publicMeetings', meetingId), meetingData)
+
+      // Count this as 1 meeting used (counts on send, not on confirmation)
+      await updateDoc(doc(db, 'users', user.uid), {
+        meetingsUsed: increment(1),
+      })
 
       // Send email to each attendee with the real meeting link
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://calvote.ai'

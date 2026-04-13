@@ -10,7 +10,10 @@ import {
   Home,
   MessageCircle,
   Smartphone,
+  Tag,
 } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
+import { toast } from 'sonner'
 
 type MeetingDraft = {
   title: string
@@ -31,12 +34,41 @@ function fmt12(t: string) {
 
 export default function MeetingConfirmedPage() {
   const router = useRouter()
+  const { user, refreshUserData } = useAuth()
   const [draft, setDraft] = useState<MeetingDraft | null>(null)
+  const [promoCode, setPromoCode] = useState('')
+  const [promoLoading, setPromoLoading] = useState(false)
+  const [promoActivated, setPromoActivated] = useState(false)
 
   useEffect(() => {
     const raw = sessionStorage.getItem('meetingDraft')
     if (raw) setDraft(JSON.parse(raw))
   }, [])
+
+  const handlePromoRedeem = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user || !promoCode.trim()) return
+    setPromoLoading(true)
+    try {
+      const res = await fetch('/api/promo/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: promoCode.trim(), uid: user.uid }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) {
+        toast.error(data.error || 'Invalid promo code.')
+        return
+      }
+      await refreshUserData()
+      setPromoActivated(true)
+      toast.success('Promo code activated!')
+    } catch {
+      toast.error('Something went wrong.')
+    } finally {
+      setPromoLoading(false)
+    }
+  }
 
   const timeRange = draft ? `${fmt12(draft.timeFrom)} – ${fmt12(draft.timeTo)}` : ''
   const firstDate = draft?.dates?.[0] ?? ''
@@ -110,6 +142,37 @@ export default function MeetingConfirmedPage() {
             </div>
           </div>
         )}
+
+        {/* Promo Code */}
+        <div className="pt-8 border-t border-[#E5E7EB] mb-8 max-w-sm mx-auto">
+          {promoActivated ? (
+            <div className="flex items-center justify-center gap-2 text-[#1A5C52] font-semibold text-sm">
+              <CheckCircle2 size={16} /> Promo code activated!
+            </div>
+          ) : (
+            <div>
+              <p className="text-xs font-bold text-[#6B7280] uppercase tracking-wider mb-3 flex items-center justify-center gap-2">
+                <Tag size={13} /> Have a Promo Code?
+              </p>
+              <form onSubmit={handlePromoRedeem} className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="CV-XXXX-XXXX"
+                  value={promoCode}
+                  onChange={e => setPromoCode(e.target.value.toUpperCase())}
+                  className="flex-1 px-4 py-2.5 rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-[#1A5C52]/20 focus:border-[#1A5C52] transition-all"
+                />
+                <button
+                  type="submit"
+                  disabled={promoLoading || !promoCode.trim()}
+                  className="px-4 py-2.5 bg-[#1A5C52] text-white font-bold rounded-lg text-sm hover:bg-[#1A5C52]/90 transition-all disabled:opacity-50"
+                >
+                  {promoLoading ? '...' : 'Apply'}
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
 
         <button
           onClick={() => router.push('/dashboard')}

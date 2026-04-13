@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { collection, getDocs, addDoc, updateDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore'
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAdminAuth } from '@/contexts/AdminAuthContext'
 import { ROLE_PERMISSIONS } from '@/lib/admin-config'
 import type { Plan } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
-import { Plus, Copy, ToggleLeft, ToggleRight, Lock, Users } from 'lucide-react'
+import { Plus, Copy, ToggleLeft, ToggleRight, Lock, Users, Trash2 } from 'lucide-react'
 
 type PromoCode = {
   id: string
@@ -121,6 +121,14 @@ export default function PromosPage() {
     await fetchPromos()
   }
 
+  const remove = async (p: PromoCode) => {
+    if (!can.canGeneratePromos) return
+    if (!confirm(`Delete promo code ${p.code}? This cannot be undone.`)) return
+    await deleteDoc(doc(db, 'promoCodes', p.id))
+    toast.success(`Deleted ${p.code}`)
+    await fetchPromos()
+  }
+
   const copy = (code: string) => { navigator.clipboard.writeText(code); toast.success('Copied!') }
 
   return (
@@ -217,6 +225,11 @@ export default function PromosPage() {
                       {can.canGeneratePromos && !exhausted && (
                         <button onClick={() => toggle(p)} className="p-1.5 hover:bg-[#F3F4F6] rounded-lg text-[#6B7280] transition-colors" title={p.isActive ? 'Deactivate' : 'Activate'}>
                           {p.isActive ? <ToggleRight size={16} className="text-[#1A5C52]" /> : <ToggleLeft size={16} />}
+                        </button>
+                      )}
+                      {can.canGeneratePromos && (
+                        <button onClick={() => remove(p)} className="p-1.5 hover:bg-[#FEF2F2] rounded-lg text-[#6B7280] hover:text-[#EF4444] transition-colors" title="Delete">
+                          <Trash2 size={14} />
                         </button>
                       )}
                     </div>
