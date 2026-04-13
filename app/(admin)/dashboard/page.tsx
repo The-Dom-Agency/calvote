@@ -29,6 +29,40 @@ import { db } from '@/lib/firebase'
 import { useAuth, PLAN_LABELS, PLAN_LIMITS } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 
+function buildResendEmail({ meeting, attendeeName, availabilityLink }: {
+  meeting: { title: string; description?: string; timeFrom: string; timeTo: string; dates: string[] }
+  attendeeName: string
+  availabilityLink: string
+}) {
+  return `
+    <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#fff;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">
+      <div style="background:#1A5C52;padding:24px 32px;">
+        <p style="color:#fff;font-weight:800;font-size:18px;margin:0;">calvote</p>
+        <p style="color:rgba(255,255,255,0.7);font-size:13px;margin:4px 0 0;">Availability Reminder</p>
+      </div>
+      <div style="padding:32px;">
+        <p style="color:#1C2B3A;font-size:15px;margin:0 0 8px;">Hi ${attendeeName},</p>
+        <p style="color:#6B7280;font-size:14px;margin:0 0 24px;">
+          Just a quick reminder — we still need your availability for <strong style="color:#1C2B3A;">${meeting.title}</strong>.
+          ${meeting.description ? `<br/><br/>${meeting.description}` : ''}
+        </p>
+        <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:16px;margin-bottom:24px;">
+          <p style="color:#6B7280;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 12px;">Meeting Details</p>
+          <p style="color:#1C2B3A;font-size:13px;margin:0 0 6px;">📅 ${meeting.dates.length} date${meeting.dates.length > 1 ? 's' : ''} in window</p>
+          <p style="color:#1C2B3A;font-size:13px;margin:0;">🕐 ${meeting.timeFrom} – ${meeting.timeTo}</p>
+        </div>
+        <p style="color:#6B7280;font-size:13px;margin:0 0 20px;">It only takes a moment — tap below to share the times that work for you.</p>
+        <a href="${availabilityLink}" style="display:inline-block;background:#1A5C52;color:#fff;font-weight:700;font-size:14px;padding:12px 28px;border-radius:8px;text-decoration:none;">
+          Share My Availability
+        </a>
+      </div>
+      <div style="padding:16px 32px;border-top:1px solid #E5E7EB;background:#F9FAFB;">
+        <p style="color:#9CA3AF;font-size:11px;margin:0;">This is a reminder from calvote. You only need to share your availability — we never access your calendar without permission.</p>
+      </div>
+    </div>
+  `
+}
+
 type Contact = {
   id: string
   name: string
@@ -108,6 +142,31 @@ export default function DashboardPage() {
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.email.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  const resendInvite = async (meeting: Meeting, attendees: { name: string; email?: string }[]) => {
+    if (!user) return
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://calvote.ai'
+    const withEmail = attendees.filter(a => a.email)
+    if (withEmail.length === 0) { toast.error('No email address found for this attendee.'); return }
+
+    const results = await Promise.allSettled(
+      withEmail.map(attendee =>
+        fetch('/api/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            uid: user.uid,
+            to: attendee.email,
+            subject: `Reminder: Please share your availability — ${meeting.title}`,
+            html: buildResendEmail({ meeting, attendeeName: attendee.name, availabilityLink: `${appUrl}/availability/${meeting.id}?name=${encodeURIComponent(attendee.name)}` }),
+          }),
+        })
+      )
+    )
+    const failed = results.filter(r => r.status === 'rejected').length
+    if (failed > 0) toast.error(`${failed} email(s) failed to send.`)
+    else toast.success(withEmail.length > 1 ? `Reminder sent to ${withEmail.length} attendees.` : `Reminder sent to ${withEmail[0].name}.`)
+  }
 
   const openMeeting = async (meeting: Meeting) => {
     setSelectedMeeting(meeting)
@@ -580,13 +639,28 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            {/* Status badge */}
-            <div className="px-5 py-3 border-b border-[#E5E7EB] flex items-center justify-between">
-              <span className="text-xs text-[#6B7280]">Status</span>
-              {selectedMeeting.status === 'confirmed'
-                ? <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#1A5C52]/10 text-[#1A5C52] uppercase tracking-wide">Confirmed</span>
-                : <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#C49A2A]/10 text-[#C49A2A] uppercase tracking-wide">Pending</span>
-              }
+            {/* Status + Resend All */}
+            <div className="px-5 py-3 border-b border-[#E5E7EB] flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[#6B7280]">Status</span>
+                {selectedMeeting.status === 'confirmed'
+                  ? <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#1A5C52]/10 text-[#1A5C52] uppercase tracking-wide">Confirmed</span>
+                  : <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#C49A2A]/10 text-[#C49A2A] uppercase tracking-wide">Pending</span>
+                }
+              </div>
+              {selectedMeeting.status === 'pending' && (
+                <button
+                  onClick={() => {
+                    const pending = selectedMeeting.attendees.filter(
+                      a => !responses.find(r => r.attendeeName.toLowerCase().trim() === a.name.toLowerCase().trim())
+                    )
+                    resendInvite(selectedMeeting, pending.length > 0 ? pending : selectedMeeting.attendees)
+                  }}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-white bg-[#1A5C52] hover:bg-[#154d44] px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <Send size={12} /> Resend All
+                </button>
+              )}
             </div>
 
             {/* Responses */}
@@ -651,8 +725,16 @@ export default function DashboardPage() {
                           )}
 
                           {!response && (
-                            <div className="px-4 py-2 border-t border-[#E5E7EB]">
+                            <div className="px-4 py-2.5 border-t border-[#E5E7EB] flex items-center justify-between">
                               <p className="text-[11px] text-[#9CA3AF] italic">Awaiting response...</p>
+                              {selectedMeeting.status === 'pending' && (
+                                <button
+                                  onClick={() => resendInvite(selectedMeeting, [attendee])}
+                                  className="flex items-center gap-1 text-[10px] font-semibold text-[#1A5C52] hover:underline"
+                                >
+                                  <Send size={10} /> Resend
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
