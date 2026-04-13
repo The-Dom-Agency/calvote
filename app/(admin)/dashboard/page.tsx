@@ -107,13 +107,13 @@ export default function DashboardPage() {
       const res = await fetch('/api/contacts/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ownerUid: user.uid, contactId: contact.id, contactEmail: contact.email }),
+        body: JSON.stringify({ ownerUid: user.uid, contactId: contact.id, contactEmail: contact.email, contactName: contact.name }),
       })
-      const { link } = await res.json()
+      const { link, emailSent } = await res.json()
       await navigator.clipboard.writeText(link)
       setCopiedId(contact.id)
       setShowInviteMenu(false)
-      toast.success(`Invite link copied for ${contact.name}`)
+      toast.success(emailSent ? `Invite sent to ${contact.name} via email` : `Invite link copied for ${contact.name}`)
       setTimeout(() => setCopiedId(null), 3000)
     } catch {
       toast.error('Failed to generate invite link.')

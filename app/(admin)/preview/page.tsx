@@ -39,6 +39,37 @@ function fmt12(t: string) {
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`
 }
 
+function buildMeetingInviteEmail({ draft, attendeeName }: { draft: MeetingDraft; attendeeName: string }) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://calvote.ai'
+  return `
+    <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#fff;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">
+      <div style="background:#1A5C52;padding:24px 32px;">
+        <p style="color:#fff;font-weight:800;font-size:18px;margin:0;">calvote</p>
+        <p style="color:rgba(255,255,255,0.7);font-size:13px;margin:4px 0 0;">Meeting Invitation</p>
+      </div>
+      <div style="padding:32px;">
+        <p style="color:#1C2B3A;font-size:15px;margin:0 0 8px;">Hi ${attendeeName},</p>
+        <p style="color:#6B7280;font-size:14px;margin:0 0 24px;">
+          You've been invited to <strong style="color:#1C2B3A;">${draft.title}</strong>.
+          ${draft.description ? `<br/><br/>${draft.description}` : ''}
+        </p>
+        <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:16px;margin-bottom:24px;">
+          <p style="color:#6B7280;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 12px;">Meeting Details</p>
+          <p style="color:#1C2B3A;font-size:13px;margin:0 0 6px;">📅 ${draft.dates.length} date${draft.dates.length > 1 ? 's' : ''} in window</p>
+          <p style="color:#1C2B3A;font-size:13px;margin:0;">🕐 ${fmt12(draft.timeFrom)} – ${fmt12(draft.timeTo)}</p>
+        </div>
+        <p style="color:#6B7280;font-size:13px;margin:0 0 20px;">Please share your availability so we can find the best time for everyone.</p>
+        <a href="${appUrl}/availability/demo-meeting" style="display:inline-block;background:#1A5C52;color:#fff;font-weight:700;font-size:14px;padding:12px 28px;border-radius:8px;text-decoration:none;">
+          Provide Availability
+        </a>
+      </div>
+      <div style="padding:16px 32px;border-top:1px solid #E5E7EB;background:#F9FAFB;">
+        <p style="color:#9CA3AF;font-size:11px;margin:0;">This email was sent via calvote. You only need to share your availability — we never access your calendar without permission.</p>
+      </div>
+    </div>
+  `
+}
+
 export default function PreviewMeetingPage() {
   const router = useRouter()
   const { user } = useAuth()
@@ -68,6 +99,24 @@ export default function PreviewMeetingPage() {
         status: 'pending',
         createdAt: serverTimestamp(),
       })
+
+      // Send email to each attendee
+      const attendeesWithEmail = draft.attendees.filter(a => a.email)
+      await Promise.allSettled(
+        attendeesWithEmail.map(attendee =>
+          fetch('/api/email/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              uid: user.uid,
+              to: attendee.email,
+              subject: `Meeting Invitation: ${draft.title}`,
+              html: buildMeetingInviteEmail({ draft, attendeeName: attendee.name }),
+            }),
+          })
+        )
+      )
+
       toast.success('Meeting requests sent successfully!', { id: 'meeting-sent' })
       sessionStorage.removeItem('meetingDraft')
       router.push('/confirmed')

@@ -15,6 +15,7 @@ export async function GET(req: Request) {
     'https://www.googleapis.com/auth/calendar.readonly',
     'https://www.googleapis.com/auth/calendar.events.readonly',
     'https://www.googleapis.com/auth/directory.readonly', // org contacts
+    'https://www.googleapis.com/auth/gmail.send',
     'openid',
     'email',
     'profile',
