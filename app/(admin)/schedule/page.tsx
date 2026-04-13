@@ -12,6 +12,7 @@ import {
   X,
   Search,
   Check,
+  Star,
 } from 'lucide-react'
 import { collection, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -47,6 +48,8 @@ export default function ScheduleMeetingPage() {
   })
   const [suggestedTime, setSuggestedTime] = useState<{ date: string; time: string } | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  // 'me' = logged-in user's calendar, or a contact id
+  const [primaryPersonId, setPrimaryPersonId] = useState<string>('me')
 
   // Load contacts from Firestore
   useEffect(() => {
@@ -115,6 +118,60 @@ export default function ScheduleMeetingPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+
+        {/* Primary Person */}
+        <section className="bg-white rounded-2xl border border-[#E5E7EB] p-6 shadow-sm space-y-4">
+          <h2 className="text-base font-bold text-[#1C2B3A] flex items-center gap-2">
+            <Star size={18} className="text-[#1A5C52]" />
+            Schedule Around
+            <span className="text-xs font-normal text-[#6B7280] ml-1">Whose availability is the priority?</span>
+          </h2>
+          <div className="flex flex-wrap gap-3">
+            {/* Me option */}
+            <button
+              type="button"
+              onClick={() => setPrimaryPersonId('me')}
+              className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border-2 transition-all text-sm font-semibold ${
+                primaryPersonId === 'me'
+                  ? 'border-[#1A5C52] bg-[#1A5C52]/5 text-[#1A5C52]'
+                  : 'border-[#E5E7EB] text-[#6B7280] hover:border-[#1A5C52]/40'
+              }`}
+            >
+              <div className="w-7 h-7 rounded-full bg-[#1A5C52]/10 flex items-center justify-center text-[10px] font-bold text-[#1A5C52]">
+                Me
+              </div>
+              You
+              {primaryPersonId === 'me' && <Check size={14} />}
+            </button>
+
+            {/* Linked contacts */}
+            {allContacts.filter(c => c.calendarLinked).map(contact => (
+              <button
+                key={contact.id}
+                type="button"
+                onClick={() => setPrimaryPersonId(contact.id)}
+                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border-2 transition-all text-sm font-semibold ${
+                  primaryPersonId === contact.id
+                    ? 'border-[#1A5C52] bg-[#1A5C52]/5 text-[#1A5C52]'
+                    : 'border-[#E5E7EB] text-[#6B7280] hover:border-[#1A5C52]/40'
+                }`}
+              >
+                <div className="w-7 h-7 rounded-full bg-[#F3F4F6] flex items-center justify-center text-[10px] font-bold text-[#6B7280]">
+                  {contact.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                </div>
+                {contact.name}
+                {primaryPersonId === contact.id && <Check size={14} />}
+              </button>
+            ))}
+
+            {allContacts.filter(c => c.calendarLinked).length === 0 && (
+              <p className="text-xs text-[#9CA3AF] self-center">
+                Connect a contact&apos;s calendar to schedule around them.
+              </p>
+            )}
+          </div>
+        </section>
+
         {/* Meeting Details */}
         <section className="bg-white rounded-2xl border border-[#E5E7EB] p-6 shadow-sm space-y-5">
           <h2 className="text-base font-bold text-[#1C2B3A] flex items-center gap-2">
