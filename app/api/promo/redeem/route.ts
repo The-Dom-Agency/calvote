@@ -28,15 +28,28 @@ export async function POST(req: NextRequest) {
         return { error: 'This promo code has been deactivated.' }
       }
 
-      if (promo.usedBy) {
-        return { error: 'This promo code has already been used.' }
+      const usedBy: string[] = Array.isArray(promo.usedBy) ? promo.usedBy : (promo.usedBy ? [promo.usedBy] : [])
+      const usedCount: number = promo.usedCount ?? usedBy.length
+      const maxUses: number = promo.maxUses ?? 1
+
+      // Check if user already used this code
+      if (usedBy.includes(uid)) {
+        return { error: 'You have already used this promo code.' }
       }
 
-      // Mark promo as used
+      // Check if code has hit its usage limit
+      if (maxUses !== -1 && usedCount >= maxUses) {
+        return { error: 'This promo code has reached its usage limit.' }
+      }
+
+      const newUsedCount = usedCount + 1
+      const nowExhausted = maxUses !== -1 && newUsedCount >= maxUses
+
+      // Update promo: increment count, add uid to usedBy array, deactivate if exhausted
       tx.update(promoRef, {
-        usedBy: uid,
-        usedAt: FieldValue.serverTimestamp(),
-        isActive: false,
+        usedBy: FieldValue.arrayUnion(uid),
+        usedCount: FieldValue.increment(1),
+        ...(nowExhausted ? { isActive: false } : {}),
       })
 
       // Update user's plan
