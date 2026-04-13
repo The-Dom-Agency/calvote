@@ -203,54 +203,58 @@ export default function DashboardPage() {
                 </div>
               ))}
 
-              {/* Invite to connect calendar */}
-              {unlinkedContacts.length > 0 && (
-                <div className="relative">
+              {/* Invite to connect calendar — always visible */}
+              <div className="relative">
+                {unlinkedContacts.length > 0 ? (
+                  <>
+                    <button
+                      onClick={() => setShowInviteMenu(v => !v)}
+                      className="w-full flex items-center justify-between gap-2 py-2.5 px-4 border border-dashed border-[#E5E7EB] rounded-xl text-[#6B7280] text-xs font-medium hover:border-[#1A5C52] hover:text-[#1A5C52] transition-colors"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Mail size={13} />
+                        Invite to connect calendar
+                      </span>
+                      {showInviteMenu ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                    </button>
+
+                    {showInviteMenu && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#E5E7EB] rounded-xl shadow-lg z-10 overflow-hidden">
+                        {unlinkedContacts.map(contact => (
+                          <button
+                            key={contact.id}
+                            onClick={() => copyInviteLink(contact)}
+                            className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#F9FAFB] transition-colors text-left"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-7 h-7 rounded-full bg-[#F3F4F6] flex items-center justify-center text-[#6B7280] font-bold text-[10px] shrink-0">
+                                {contact.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-semibold text-[#1C2B3A] truncate">{contact.name}</p>
+                                <p className="text-[10px] text-[#9CA3AF] truncate">{contact.email}</p>
+                              </div>
+                            </div>
+                            {copiedId === contact.id ? (
+                              <CheckCircle2 size={13} className="text-[#1A5C52] shrink-0 ml-2" />
+                            ) : (
+                              <Link2 size={13} className="text-[#9CA3AF] shrink-0 ml-2" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
                   <button
-                    onClick={() => setShowInviteMenu(v => !v)}
-                    className="w-full flex items-center justify-between gap-2 py-2.5 px-4 border border-dashed border-[#E5E7EB] rounded-xl text-[#6B7280] text-xs font-medium hover:border-[#1A5C52] hover:text-[#1A5C52] transition-colors"
+                    onClick={() => router.push('/contacts')}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 border border-dashed border-[#E5E7EB] rounded-xl text-[#6B7280] text-xs font-medium hover:border-[#1A5C52] hover:text-[#1A5C52] transition-colors"
                   >
-                    <span className="flex items-center gap-2">
-                      <Mail size={13} />
-                      Invite to connect calendar
-                    </span>
-                    {showInviteMenu ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                    <Mail size={13} />
+                    Invite to connect calendar
                   </button>
-
-                  {showInviteMenu && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#E5E7EB] rounded-xl shadow-lg z-10 overflow-hidden">
-                      {unlinkedContacts.map(contact => (
-                        <button
-                          key={contact.id}
-                          onClick={() => copyInviteLink(contact)}
-                          className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#F9FAFB] transition-colors text-left"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-7 h-7 rounded-full bg-[#F3F4F6] flex items-center justify-center text-[#6B7280] font-bold text-[10px] shrink-0">
-                              {contact.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-xs font-semibold text-[#1C2B3A] truncate">{contact.name}</p>
-                              <p className="text-[10px] text-[#9CA3AF] truncate">{contact.email}</p>
-                            </div>
-                          </div>
-                          {copiedId === contact.id ? (
-                            <CheckCircle2 size={13} className="text-[#1A5C52] shrink-0 ml-2" />
-                          ) : (
-                            <Link2 size={13} className="text-[#9CA3AF] shrink-0 ml-2" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                )}
                 </div>
-              )}
-
-              {contacts.length === 0 && !calendarConnected && (
-                <p className="text-xs text-[#9CA3AF] text-center py-2">
-                  Add contacts to invite them.
-                </p>
-              )}
             </div>
           </section>
 
