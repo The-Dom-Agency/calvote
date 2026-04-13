@@ -16,6 +16,9 @@ export default function TermsPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-16">
+        <Link href="/" className="inline-flex items-center gap-2 text-sm text-[#6B7280] hover:text-[#1C2B3A] font-medium mb-10 transition-colors group">
+          <span className="group-hover:-translate-x-1 transition-transform">←</span> Back to Home
+        </Link>
         <h1 className="text-4xl font-bold text-[#1C2B3A] mb-2">Terms of Service</h1>
         <p className="text-sm text-[#9CA3AF] mb-12">Last updated: April 13, 2026</p>
 
