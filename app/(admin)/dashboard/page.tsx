@@ -14,7 +14,6 @@ import {
   Clock,
   Zap,
   CheckCircle2,
-  AlertCircle,
   Power,
   Mail,
   Link2,
@@ -118,63 +117,30 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* Plan + Calendar Status Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Plan status */}
-        <div className="bg-white rounded-2xl border border-[#E5E7EB] p-4 sm:p-5 shadow-sm flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#1A5C52]/10 rounded-xl flex items-center justify-center shrink-0">
-              <Zap size={18} className="text-[#1A5C52]" />
-            </div>
-            <div>
-              <p className="text-xs text-[#6B7280] font-medium">Current Plan</p>
-              <p className="text-sm font-bold text-[#1C2B3A]">
-                {PLAN_LABELS[userData?.plan ?? 'free']}
-              </p>
+      {/* Plan Status Bar */}
+      <div className="bg-white rounded-2xl border border-[#E5E7EB] p-4 sm:p-5 shadow-sm flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-[#1A5C52]/10 rounded-xl flex items-center justify-center shrink-0">
+            <Zap size={18} className="text-[#1A5C52]" />
+          </div>
+          <div>
+            <p className="text-xs text-[#6B7280] font-medium">Current Plan</p>
+            <p className="text-sm font-bold text-[#1C2B3A]">
+              {PLAN_LABELS[userData?.plan ?? 'free']}
+            </p>
+          </div>
+        </div>
+        {meetingLimit > 0 && (
+          <div className="text-right min-w-[90px]">
+            <p className="text-xs text-[#6B7280] mb-1">{meetingsUsed} / {meetingLimit} meetings</p>
+            <div className="h-1.5 bg-[#F3F4F6] rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${usagePct > 90 ? 'bg-[#EF4444]' : 'bg-[#1A5C52]'}`}
+                style={{ width: `${usagePct}%` }}
+              />
             </div>
           </div>
-          {meetingLimit > 0 && (
-            <div className="text-right min-w-[90px]">
-              <p className="text-xs text-[#6B7280] mb-1">{meetingsUsed} / {meetingLimit}</p>
-              <div className="h-1.5 bg-[#F3F4F6] rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${usagePct > 90 ? 'bg-[#EF4444]' : 'bg-[#1A5C52]'}`}
-                  style={{ width: `${usagePct}%` }}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Google Calendar status */}
-        <div className="bg-white rounded-2xl border border-[#E5E7EB] p-4 sm:p-5 shadow-sm flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#F9FAFB] rounded-xl flex items-center justify-center border border-[#E5E7EB] shrink-0">
-              <Calendar size={18} className={calendarConnected ? 'text-[#1A5C52]' : 'text-[#9CA3AF]'} />
-            </div>
-            <div>
-              <p className="text-xs text-[#6B7280] font-medium">Google Calendar</p>
-              {calendarConnected ? (
-                <p className="text-sm font-bold text-[#1A5C52] flex items-center gap-1">
-                  <CheckCircle2 size={13} />
-                  <span className="truncate max-w-[140px]">{userData?.googleCalendar?.email}</span>
-                </p>
-              ) : (
-                <p className="text-sm font-bold text-[#6B7280] flex items-center gap-1">
-                  <AlertCircle size={13} /> Not connected
-                </p>
-              )}
-            </div>
-          </div>
-          {!calendarConnected && (
-            <a
-              href={`/api/google-calendar/connect?state=${userData?.uid}`}
-              className="text-xs font-bold text-[#1A5C52] border border-[#1A5C52] px-3 py-1.5 rounded-lg hover:bg-[#1A5C52]/5 transition-colors whitespace-nowrap"
-            >
-              Connect →
-            </a>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Grid Layout */}
