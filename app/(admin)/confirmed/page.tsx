@@ -12,7 +12,7 @@ import {
   Smartphone,
   Tag,
 } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth, PLAN_LIMITS } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 
 type MeetingDraft = {
@@ -34,7 +34,7 @@ function fmt12(t: string) {
 
 export default function MeetingConfirmedPage() {
   const router = useRouter()
-  const { user, refreshUserData } = useAuth()
+  const { user, userData, refreshUserData } = useAuth()
   const [draft, setDraft] = useState<MeetingDraft | null>(null)
   const [promoCode, setPromoCode] = useState('')
   const [promoLoading, setPromoLoading] = useState(false)
@@ -143,7 +143,8 @@ export default function MeetingConfirmedPage() {
           </div>
         )}
 
-        {/* Promo Code */}
+        {/* Promo Code — only shown when package is exhausted */}
+        {userData && userData.meetingsUsed >= PLAN_LIMITS[userData.plan] && (
         <div className="pt-8 border-t border-[#E5E7EB] mb-8 max-w-sm mx-auto">
           {promoActivated ? (
             <div className="flex items-center justify-center gap-2 text-[#1A5C52] font-semibold text-sm">
@@ -173,6 +174,7 @@ export default function MeetingConfirmedPage() {
             </div>
           )}
         </div>
+        )}
 
         <button
           onClick={() => router.push('/dashboard')}
