@@ -118,6 +118,9 @@ export default function DashboardPage() {
     const ref = collection(db, 'users', user.uid, 'meetings')
     return onSnapshot(ref, snap => {
       setMeetings(snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Meeting, 'id'>) })))
+    }, err => {
+      console.error('Meetings listener error:', err.code, err.message)
+      toast.error(`Could not load meetings: ${err.message}`)
     })
   }, [user])
 
